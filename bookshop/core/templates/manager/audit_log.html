@@ -1,0 +1,343 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Журнал аудита{% endblock %}
+{% block page_title %}📋 Журнал аудита{% endblock %}
+{% block page_description %}Отслеживание всех изменений в системе{% endblock %}
+
+{% block content %}
+  <!-- Фильтры -->
+  <div class="data-card mb-4">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Фильтры</h3>
+    </div>
+    <form method="get" action="{% url 'manager_audit_log' %}" class="row g-3">
+      <div class="col-md-3">
+        <label class="form-label">Модель:</label>
+        <select name="model" class="form-select">
+          <option value="">Все модели</option>
+          {% for model in all_models %}
+          <option value="{{ model }}" {% if model_filter == model %}selected{% endif %}>{{ model }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Действие:</label>
+        <select name="action" class="form-select">
+          <option value="">Все действия</option>
+          {% for value, label in action_choices %}
+          <option value="{{ value }}" {% if action_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Пользователь:</label>
+        <select name="user" class="form-select">
+          <option value="">Все пользователи</option>
+          {% for u in users_with_changes %}
+          <option value="{{ u.id }}" {% if user_filter == u.id|stringformat:"s" %}selected{% endif %}>{{ u.email }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Поиск:</label>
+        <input type="text" name="q" class="form-control" placeholder="Поиск..." value="{{ search_query }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Дата от:</label>
+        <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Дата до:</label>
+        <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+      </div>
+      <div class="col-12">
+        <button type="submit" class="btn btn-manager btn-manager-primary">
+          <i class="bi bi-funnel"></i> Применить фильтры
+        </button>
+        <a href="{% url 'manager_audit_log' %}" class="btn btn-manager btn-manager-secondary">
+          <i class="bi bi-arrow-counterclockwise"></i> Сбросить
+        </a>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Статистика -->
+  <div class="stats-grid mb-4">
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-title">Всего записей</div>
+        <div class="stat-card-icon primary">
+          <i class="bi bi-journal-text"></i>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ total_logs }}</div>
+    </div>
+  </div>
+  
+  <div class="row g-4 mb-4">
+    <!-- Статистика по действиям -->
+    <div class="col-lg-6">
+      <div class="data-card">
+        <div class="data-card-header">
+          <h3 class="data-card-title">По действиям</h3>
+        </div>
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>Действие</th>
+              <th>Количество</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stat in stats_by_action %}
+            <tr>
+              <td>
+                {% for value, label in action_choices %}
+                  {% if stat.action == value %}{{ label }}{% endif %}
+                {% endfor %}
+              </td>
+              <td><strong>{{ stat.count }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="2" class="text-center text-muted">Нет данных</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Статистика по моделям -->
+    <div class="col-lg-6">
+      <div class="data-card">
+        <div class="data-card-header">
+          <h3 class="data-card-title">По моделям</h3>
+        </div>
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>Модель</th>
+              <th>Количество</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stat in stats_by_model %}
+            <tr>
+              <td><strong>{{ stat.model_name }}</strong></td>
+              <td><strong>{{ stat.count }}</strong></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="2" class="text-center text-muted">Нет данных</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Журнал изменений -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Журнал изменений ({{ total_logs }})</h3>
+    </div>
+    
+    {% if audit_logs %}
+      <div class="table-responsive">
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>Дата/Время</th>
+              <th>Действие</th>
+              <th>Модель</th>
+              <th>Объект</th>
+              <th>Пользователь</th>
+              <th>Изменения</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for log in audit_logs %}
+            <tr>
+              <td>{{ log.created_at|date:"d.m.Y H:i:s" }}</td>
+              <td>
+                <span class="badge-manager 
+                  {% if log.action == 'create' %}badge-new
+                  {% elif log.action == 'update' %}badge-processing
+                  {% elif log.action == 'delete' %}badge-cancelled
+                  {% elif log.action == 'view' %}badge-info
+                  {% elif log.action == 'login' or log.action == 'register' %}badge-success
+                  {% elif log.action == 'logout' %}badge-secondary
+                  {% elif log.action == 'download' or log.action == 'export' %}badge-primary
+                  {% elif log.action == 'import' or log.action == 'config' %}badge-warning
+                  {% else %}badge-secondary{% endif %}">
+                  {{ log.get_action_display }}
+                </span>
+              </td>
+              <td><strong>{{ log.model_name|default:"—" }}</strong></td>
+              <td>
+                {% if log.object_repr %}
+                  {{ log.object_repr|truncatechars:30 }}
+                {% elif log.description %}
+                  {{ log.description|truncatechars:30 }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.user %}
+                  {{ log.user.email|truncatechars:20 }}
+                {% else %}
+                  <span class="text-muted">Неавторизованный</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if log.changes %}
+                  <button type="button" class="btn btn-sm btn-manager btn-manager-secondary" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#changesModal{{ log.id }}">
+                    <i class="bi bi-eye"></i> Показать
+                  </button>
+                {% elif log.description %}
+                  <button type="button" class="btn btn-sm btn-manager btn-manager-secondary" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#detailsModal{{ log.id }}">
+                    <i class="bi bi-info-circle"></i> Детали
+                  </button>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td><small class="text-muted">{{ log.ip_address|default:"—" }}</small></td>
+            </tr>
+            
+            <!-- Модальное окно с изменениями -->
+            {% if log.changes %}
+            <div class="modal fade" id="changesModal{{ log.id }}" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Изменения в {{ log.model_name }} #{{ log.object_id }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Поле</th>
+                          <th>Было</th>
+                          <th>Стало</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {% for field, values in log.changes.items %}
+                        <tr>
+                          <td><strong>{{ field }}</strong></td>
+                          <td>
+                            <span class="badge bg-danger">{{ values.old|default:"—" }}</span>
+                          </td>
+                          <td>
+                            <span class="badge bg-success">{{ values.new|default:"—" }}</span>
+                          </td>
+                        </tr>
+                        {% endfor %}
+                      </tbody>
+                    </table>
+                    <div class="mt-3">
+                      <small class="text-muted">
+                        <strong>Дата:</strong> {{ log.created_at|date:"d.m.Y H:i:s" }}<br>
+                        {% if log.user %}
+                        <strong>Пользователь:</strong> {{ log.user.email }}<br>
+                        {% endif %}
+                        {% if log.ip_address %}
+                        <strong>IP:</strong> {{ log.ip_address }}<br>
+                        {% endif %}
+                        {% if log.url_path %}
+                        <strong>URL:</strong> {{ log.url_path }}
+                        {% endif %}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            
+            <!-- Модальное окно с деталями действия -->
+            {% if log.description and not log.changes %}
+            <div class="modal fade" id="detailsModal{{ log.id }}" tabindex="-1">
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Детали действия</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <strong>Описание:</strong>
+                      <p>{{ log.description }}</p>
+                    </div>
+                    {% if log.model_name %}
+                    <div class="mb-3">
+                      <strong>Модель:</strong> {{ log.model_name }}
+                      {% if log.object_id %}#{{ log.object_id }}{% endif %}
+                    </div>
+                    {% endif %}
+                    <div class="mt-3">
+                      <small class="text-muted">
+                        <strong>Дата:</strong> {{ log.created_at|date:"d.m.Y H:i:s" }}<br>
+                        {% if log.user %}
+                        <strong>Пользователь:</strong> {{ log.user.email }}<br>
+                        {% else %}
+                        <strong>Пользователь:</strong> Неавторизованный<br>
+                        {% endif %}
+                        {% if log.ip_address %}
+                        <strong>IP:</strong> {{ log.ip_address }}<br>
+                        {% endif %}
+                        {% if log.url_path %}
+                        <strong>URL:</strong> {{ log.url_path }}<br>
+                        {% endif %}
+                        {% if log.user_agent %}
+                        <strong>User Agent:</strong> {{ log.user_agent|truncatechars:100 }}
+                        {% endif %}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Пагинация -->
+      {% if audit_logs.has_other_pages %}
+      <nav aria-label="Навигация по страницам" class="mt-4">
+        <ul class="pagination justify-content-center">
+          {% if audit_logs.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ audit_logs.previous_page_number }}{% if model_filter %}&model={{ model_filter }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Предыдущая</a>
+          </li>
+          {% endif %}
+          
+          <li class="page-item active">
+            <span class="page-link">Страница {{ audit_logs.number }} из {{ audit_logs.paginator.num_pages }}</span>
+          </li>
+          
+          {% if audit_logs.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ audit_logs.next_page_number }}{% if model_filter %}&model={{ model_filter }}{% endif %}{% if action_filter %}&action={{ action_filter }}{% endif %}{% if user_filter %}&user={{ user_filter }}{% endif %}{% if date_from %}&date_from={{ date_from }}{% endif %}{% if date_to %}&date_to={{ date_to }}{% endif %}{% if search_query %}&q={{ search_query }}{% endif %}">Следующая</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+    {% else %}
+      <p class="text-muted text-center py-4">Записей не найдено</p>
+    {% endif %}
+  </div>
+{% endblock %}

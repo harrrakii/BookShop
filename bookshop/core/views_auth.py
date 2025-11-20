@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 
 from .models import Order, Review, SavedAddress, PaymentCard, Book, OrderItem, LoyaltyCard, Role
 from .forms import UserProfileForm, ReviewForm, SavedAddressForm, PaymentCardForm
+from .audit import log_action
 from decimal import Decimal
 from datetime import date
 
@@ -41,6 +42,14 @@ def register_view(request):
             user.role = user_role
             user.save()
         
+        # Логируем регистрацию
+        log_action(
+            action='register',
+            user=user,
+            request=request,
+            description=f'Регистрация нового пользователя: {email}',
+        )
+        
         messages.success(request, 'Регистрация успешна! Войдите в аккаунт.')
         return redirect('login')
 
@@ -55,9 +64,23 @@ def login_view(request):
         user = authenticate(request, email=email, password=password)
         if user:
             login(request, user)
+            # Логируем вход в систему
+            log_action(
+                action='login',
+                user=user,
+                request=request,
+                description=f'Вход в систему: {email}',
+            )
             return redirect('home')
         else:
             messages.error(request, 'Неверный логин или пароль')
+            # Логируем неудачную попытку входа
+            log_action(
+                action='login',
+                user=None,
+                request=request,
+                description=f'Неудачная попытка входа: {email}',
+            )
 
     return render(request, 'login.html')
 
@@ -252,5 +275,13 @@ def delete_payment_card(request, card_id):
 
 
 def logout_view(request):
+    # Логируем выход из системы перед logout
+    if request.user.is_authenticated:
+        log_action(
+            action='logout',
+            user=request.user,
+            request=request,
+            description=f'Выход из системы: {request.user.email}',
+        )
     logout(request)
     return redirect('login')

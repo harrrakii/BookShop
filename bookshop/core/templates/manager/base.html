@@ -421,6 +421,12 @@
             </a>
           </li>
           <li class="sidebar-menu-item">
+            <a href="{% url 'manager_audit_log' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_audit_log' %}active{% endif %}">
+              <i class="bi bi-journal-text"></i>
+              <span>Журнал аудита</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
             <a href="{% url 'manager_export_data' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_export_data' %}active{% endif %}">
               <i class="bi bi-download"></i>
               <span>Выгрузить данные</span>

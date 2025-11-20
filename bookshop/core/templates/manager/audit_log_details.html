@@ -1,0 +1,87 @@
+<div class="audit-details">
+  <div class="mb-3">
+    <strong>Дата и время:</strong> {{ log.created_at|date:"d.m.Y H:i:s" }}
+  </div>
+  
+  <div class="mb-3">
+    <strong>Пользователь:</strong> 
+    {% if log.user %}
+      {{ log.user.email|default:log.user.username }} ({{ log.user.get_full_name|default:"—" }})
+    {% else %}
+      <span class="text-muted">Система</span>
+    {% endif %}
+  </div>
+  
+  <div class="mb-3">
+    <strong>Действие:</strong> 
+    <span class="badge 
+      {% if log.action_type == 'create' %}bg-success
+      {% elif log.action_type == 'update' %}bg-warning
+      {% else %}bg-danger{% endif %}">
+      {{ log.get_action_type_display }}
+    </span>
+  </div>
+  
+  <div class="mb-3">
+    <strong>Модель:</strong> {{ log.model_name }}
+  </div>
+  
+  <div class="mb-3">
+    <strong>Объект:</strong> {{ log.object_repr }}
+  </div>
+  
+  <div class="mb-3">
+    <strong>ID объекта:</strong> {{ log.object_id }}
+  </div>
+  
+  {% if log.ip_address %}
+  <div class="mb-3">
+    <strong>IP адрес:</strong> {{ log.ip_address }}
+  </div>
+  {% endif %}
+  
+  {% if log.user_agent %}
+  <div class="mb-3">
+    <strong>User-Agent:</strong> <small class="text-muted">{{ log.user_agent }}</small>
+  </div>
+  {% endif %}
+  
+  {% if log.changed_fields %}
+  <div class="mt-4">
+    <strong>Изменения полей:</strong>
+    <div class="table-responsive mt-2">
+      <table class="table table-sm">
+        <thead>
+          <tr>
+            <th>Поле</th>
+            <th>Было</th>
+            <th>Стало</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for field, changes in log.changed_fields.items %}
+          <tr>
+            <td><strong>{{ field }}</strong></td>
+            <td>
+              <span style="color: #dc3545; background: #f8d7da; padding: 0.25rem 0.5rem; border-radius: 4px; display: inline-block;">
+                {{ changes.old|default:"—"|truncatechars:100 }}
+              </span>
+            </td>
+            <td>
+              <span style="color: #28a745; background: #d1fae5; padding: 0.25rem 0.5rem; border-radius: 4px; display: inline-block;">
+                {{ changes.new|default:"—"|truncatechars:100 }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info mt-3">
+    <i class="bi bi-info-circle"></i> Нет изменений полей (создание или удаление объекта)
+  </div>
+  {% endif %}
+</div>
+

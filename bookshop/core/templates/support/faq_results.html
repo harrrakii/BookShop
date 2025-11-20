@@ -1,0 +1,18 @@
+{% if faqs %}
+  <div class="faq-section">
+    <h5 class="mb-3">Результаты поиска ({{ faqs|length }})</h5>
+    {% for faq in faqs %}
+    <div class="faq-item" onclick="toggleFaq(this)">
+      <div class="faq-question">
+        <i class="bi bi-question-circle-fill text-primary"></i> {{ faq.question }}
+      </div>
+      <div class="faq-answer">{{ faq.answer }}</div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> По вашему запросу ничего не найдено. Попробуйте изменить поисковый запрос.
+  </div>
+{% endif %}
+

@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.db.models import Count, Sum, Avg, Q, F
@@ -21,6 +22,7 @@ from .models import (
     LoyaltyCard,
 )
 from .admin_utils import export_all_data_to_json, import_data_from_json
+from .audit import log_action
 
 
 def manager_required(user):
@@ -328,6 +330,15 @@ def manager_export_data(request):
         json_data = export_all_data_to_json()
         response = HttpResponse(json_data, content_type='application/json; charset=utf-8')
         response['Content-Disposition'] = f'attachment; filename="lexicon_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json"'
+        
+        # Логируем экспорт данных
+        log_action(
+            action='export',
+            user=request.user,
+            request=request,
+            description='Экспорт всех данных в JSON',
+        )
+        
         return response
     except Exception as e:
         messages.error(request, f"Ошибка при экспорте данных: {str(e)}")
@@ -351,6 +362,15 @@ def manager_import_data(request):
     try:
         json_data = json_file.read().decode('utf-8')
         import_data_from_json(json_data)
+        
+        # Логируем импорт данных
+        log_action(
+            action='import',
+            user=request.user,
+            request=request,
+            description=f'Импорт данных из файла: {json_file.name}',
+        )
+        
         messages.success(request, "Данные успешно импортированы")
     except Exception as e:
         messages.error(request, f"Ошибка при импорте данных: {str(e)}")
@@ -450,6 +470,14 @@ def manager_reports(request):
 @user_passes_test(manager_required, login_url='/login/')
 def manager_reports_export_csv(request):
     """Экспорт отчета в CSV"""
+    # Логируем скачивание отчета
+    log_action(
+        action='download',
+        user=request.user,
+        request=request,
+        description='Скачивание отчета в формате CSV',
+    )
+    
     # Получаем те же фильтры, что и в отчете
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
@@ -510,6 +538,14 @@ def manager_reports_export_csv(request):
 @user_passes_test(manager_required, login_url='/login/')
 def manager_reports_export_image(request):
     """Экспорт отчета в виде изображения (PNG)"""
+    # Логируем скачивание отчета
+    log_action(
+        action='download',
+        user=request.user,
+        request=request,
+        description='Скачивание отчета в формате PNG',
+    )
+    
     try:
         import matplotlib
         matplotlib.use('Agg')
@@ -592,4 +628,194 @@ def manager_reports_export_image(request):
     response['Content-Disposition'] = f'attachment; filename="lexicon_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png"'
     
     return response
+
+
+@login_required
+@user_passes_test(manager_required, login_url='/login/')
+def manager_audit_log(request):
+    """Журнал аудита - отслеживание изменений"""
+    from .models import AuditLog
+    
+    # Фильтры
+    model_filter = request.GET.get('model', '')
+    action_filter = request.GET.get('action', '')
+    user_filter = request.GET.get('user', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search_query = request.GET.get('q', '')
+    
+    # Базовый queryset
+    audit_logs = AuditLog.objects.select_related('user').all()
+    
+    # Применяем фильтры
+    if model_filter:
+        audit_logs = audit_logs.filter(model_name=model_filter)
+    
+    if action_filter:
+        audit_logs = audit_logs.filter(action=action_filter)
+    
+    if user_filter:
+        try:
+            user_id = int(user_filter)
+            audit_logs = audit_logs.filter(user_id=user_id)
+        except ValueError:
+            pass
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            audit_logs = audit_logs.filter(created_at__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_obj = date_to_obj + timedelta(days=1)
+            audit_logs = audit_logs.filter(created_at__lt=date_to_obj)
+        except ValueError:
+            pass
+    
+    if search_query:
+        audit_logs = audit_logs.filter(
+            Q(object_repr__icontains=search_query) |
+            Q(model_name__icontains=search_query)
+        )
+    
+    # Если фильтры не заданы, показываем за последние 7 дней
+    if not date_from and not date_to:
+        week_ago = timezone.now() - timedelta(days=7)
+        audit_logs = audit_logs.filter(created_at__gte=week_ago)
+    
+    # Статистика
+    total_logs = audit_logs.count()
+    stats_by_action = audit_logs.values('action').annotate(count=Count('id')).order_by('-count')
+    stats_by_model = audit_logs.values('model_name').annotate(count=Count('id')).order_by('-count')
+    
+    # Получаем уникальные модели для фильтра
+    all_models = AuditLog.objects.values_list('model_name', flat=True).distinct().order_by('model_name')
+    
+    # Получаем пользователей, которые вносили изменения
+    users_with_changes = User.objects.filter(
+        id__in=AuditLog.objects.values_list('user_id', flat=True).distinct()
+    ).order_by('email')
+    
+    # Пагинация
+    from django.core.paginator import Paginator
+    paginator = Paginator(audit_logs, 50)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'audit_logs': page_obj,
+        'total_logs': total_logs,
+        'stats_by_action': stats_by_action,
+        'stats_by_model': stats_by_model,
+        'all_models': all_models,
+        'users_with_changes': users_with_changes,
+        'model_filter': model_filter,
+        'action_filter': action_filter,
+        'user_filter': user_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search_query': search_query,
+        'action_choices': AuditLog.ACTION_TYPES,
+    }
+    
+    return render(request, 'manager/audit_log.html', context)
+
+
+@login_required
+@user_passes_test(manager_required, login_url='/login/')
+def manager_audit_log(request):
+    """Журнал аудита - отслеживание изменений"""
+    from .models import AuditLog
+    
+    # Фильтры
+    model_filter = request.GET.get('model', '')
+    action_filter = request.GET.get('action', '')
+    user_filter = request.GET.get('user', '')
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    search_query = request.GET.get('q', '')
+    
+    # Базовый queryset
+    audit_logs = AuditLog.objects.select_related('user').all()
+    
+    # Применяем фильтры
+    if model_filter:
+        audit_logs = audit_logs.filter(model_name__icontains=model_filter)
+    
+    if action_filter:
+        audit_logs = audit_logs.filter(action_type=action_filter)
+    
+    if user_filter:
+        try:
+            user_id = int(user_filter)
+            audit_logs = audit_logs.filter(user_id=user_id)
+        except ValueError:
+            pass
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            audit_logs = audit_logs.filter(created_at__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_obj = date_to_obj + timedelta(days=1)
+            audit_logs = audit_logs.filter(created_at__lt=date_to_obj)
+        except ValueError:
+            pass
+    
+    if search_query:
+        audit_logs = audit_logs.filter(
+            Q(object_repr__icontains=search_query) |
+            Q(model_name__icontains=search_query) |
+            Q(user__email__icontains=search_query) |
+            Q(user__username__icontains=search_query)
+        )
+    
+    # Если фильтры не заданы, показываем последние 100 записей
+    if not any([model_filter, action_filter, user_filter, date_from, date_to, search_query]):
+        audit_logs = audit_logs[:100]
+    else:
+        audit_logs = audit_logs[:500]  # При фильтрах показываем больше
+    
+    # Получаем уникальные модели для фильтра
+    models_list = AuditLog.objects.values_list('model_name', flat=True).distinct().order_by('model_name')
+    
+    # Получаем пользователей для фильтра
+    users_list = User.objects.filter(
+        id__in=AuditLog.objects.values_list('user_id', flat=True).distinct()
+    ).order_by('email')
+    
+    context = {
+        'audit_logs': audit_logs,
+        'models_list': models_list,
+        'users_list': users_list,
+        'model_filter': model_filter,
+        'action_filter': action_filter,
+        'user_filter': user_filter,
+        'date_from': date_from,
+        'date_to': date_to,
+        'search_query': search_query,
+        'action_choices': AuditLog.ACTION_TYPES,
+    }
+    
+    return render(request, 'manager/audit_log.html', context)
+
+
+@login_required
+@user_passes_test(manager_required, login_url='/login/')
+def manager_audit_log_details(request, log_id):
+    """Детали записи аудита (AJAX)"""
+    from .models import AuditLog
+    
+    log = get_object_or_404(AuditLog, pk=log_id)
+    
+    return render(request, 'manager/audit_log_details.html', {'log': log})
 

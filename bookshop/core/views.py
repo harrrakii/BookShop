@@ -25,6 +25,7 @@ from .models import (
 from django.db.models import Count
 
 from .forms import CheckoutForm
+from .audit import log_action
 from .serializers import (
     CategorySerializer,
     PublisherSerializer,
@@ -155,8 +156,33 @@ def books_by_genre(request, genre_id):
     return render(request, "books_filtered.html", context)
 
 
+def author_detail(request, author_id):
+    """Страница с подробной информацией об авторе"""
+    author = get_object_or_404(Author.objects.prefetch_related('books'), pk=author_id)
+    
+    # Получаем все книги автора с рейтингами
+    books = author.books.all().select_related('publisher').prefetch_related('genres').order_by('-rating', 'title')
+    
+    # Логируем просмотр автора
+    log_action(
+        action='view',
+        user=request.user if request.user.is_authenticated else None,
+        request=request,
+        model_name='Author',
+        object_id=author.id,
+        object_repr=str(author),
+        description=f'Просмотр страницы автора: {author}',
+    )
+    
+    context = {
+        'author': author,
+        'books': books,
+    }
+    return render(request, 'author_detail.html', context)
+
+
 def books_by_author(request, author_id):
-    """Страница книг по автору"""
+    """Страница книг по автору (старая версия - для совместимости)"""
     author = get_object_or_404(Author, pk=author_id)
     
     # Параметры сортировки
@@ -341,6 +367,19 @@ def product_detail(request, product_type: str, pk: int):
     reviews = None
     if product_type == "book":
         reviews = product.reviews.select_related("user").order_by("-created_at").all()
+
+    # Логируем просмотр товара
+    model_name = 'Book' if product_type == 'book' else 'Stationery'
+    product_name = product.title if product_type == 'book' else product.name
+    log_action(
+        action='view',
+        user=request.user if request.user.is_authenticated else None,
+        request=request,
+        model_name=model_name,
+        object_id=product.id,
+        object_repr=product_name,
+        description=f'Просмотр {"книги" if product_type == "book" else "товара"}: {product_name}',
+    )
 
     context = {
         "product_type": product_type,
@@ -527,6 +566,17 @@ def checkout(request):
 
             request.session["cart"] = {}
             request.session.modified = True
+
+            # Логируем создание заказа
+            log_action(
+                action='create',
+                user=request.user if request.user.is_authenticated else None,
+                request=request,
+                model_name='Order',
+                object_id=order.id,
+                object_repr=f'Заказ #{order.id}',
+                description=f'Создан заказ #{order.id} на сумму {order.total_amount} руб. ({order.get_fulfillment_type_display()})',
+            )
 
             messages.success(request, "Заказ успешно создан!")
             return redirect("order_success", order_id=order.id)

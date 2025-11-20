@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Чат поддержки — Lexicon</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    body {
+      background-color: #f0f2f5;
+      font-family: "Inter", sans-serif;
+    }
+    header {
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1rem 3rem;
+    }
+    .support-container {
+      max-width: 1400px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .support-wrapper {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    @media (min-width: 992px) {
+      .support-wrapper {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    /* FAQ стили */
+    .faq-card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 2rem;
+      height: fit-content;
+    }
+    .faq-header {
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      color: white;
+      padding: 1.5rem;
+      border-radius: 15px 15px 0 0;
+      margin: -2rem -2rem 1.5rem -2rem;
+    }
+    .faq-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .search-box {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+    .search-box input {
+      padding-left: 45px;
+      border-radius: 25px;
+      border: 2px solid #e9ecef;
+    }
+    .search-box i {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #6c757d;
+    }
+    .faq-category {
+      background: #f8f9fa;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .faq-category-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #4e54c8;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .faq-item {
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+      background: #fff;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 2px solid transparent;
+    }
+    .faq-item:hover {
+      background: #e8edff;
+      border-color: #4e54c8;
+      transform: translateX(5px);
+    }
+    .faq-question {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    .faq-answer {
+      color: #666;
+      font-size: 0.9rem;
+      display: none;
+      margin-top: 0.5rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid #dee2e6;
+    }
+    .faq-item.active .faq-answer {
+      display: block;
+    }
+    /* Чат стили */
+    .chat-wrapper {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 200px);
+      min-height: 600px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    .chat-header {
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      color: white;
+      padding: 1.5rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .chat-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .chat-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #28a745;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 2rem;
+      background: #f0f2f5;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    .message {
+      display: flex;
+      gap: 1rem;
+      animation: slideIn 0.3s ease;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .message.user {
+      flex-direction: row-reverse;
+    }
+    .message-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .message.user .message-avatar {
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      color: white;
+    }
+    .message.support .message-avatar {
+      background: linear-gradient(135deg, #28a745, #20c997);
+      color: white;
+    }
+    .message-content {
+      max-width: 70%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .message.user .message-content {
+      align-items: flex-end;
+    }
+    .message.support .message-content {
+      align-items: flex-start;
+    }
+    .message-bubble {
+      padding: 1rem 1.25rem;
+      border-radius: 18px;
+      word-wrap: break-word;
+      position: relative;
+    }
+    .message.user .message-bubble {
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      color: white;
+      border-bottom-right-radius: 4px;
+    }
+    .message.support .message-bubble {
+      background: #fff;
+      color: #333;
+      border-bottom-left-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .message-attachment {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .message.user .message-attachment {
+      background: rgba(255,255,255,0.2);
+    }
+    .message.support .message-attachment {
+      background: #f8f9fa;
+    }
+    .attachment-image {
+      max-width: 300px;
+      max-height: 300px;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .attachment-file {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: rgba(255,255,255,0.2);
+      border-radius: 8px;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.2s ease;
+    }
+    .message.user .attachment-file {
+      color: white;
+    }
+    .message.support .attachment-file {
+      background: #f8f9fa;
+      color: #333;
+    }
+    .attachment-file:hover {
+      background: rgba(255,255,255,0.3);
+      transform: translateX(3px);
+    }
+    .attachment-icon {
+      font-size: 1.5rem;
+    }
+    .message-time {
+      font-size: 0.75rem;
+      color: #6c757d;
+      padding: 0 0.5rem;
+    }
+    .message.user .message-time {
+      text-align: right;
+    }
+    .message-support-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #28a745;
+      margin-bottom: 0.25rem;
+    }
+    .chat-input-area {
+      background: #fff;
+      padding: 1.5rem 2rem;
+      border-top: 1px solid #e9ecef;
+    }
+    .input-group-custom {
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+    .message-input-wrapper {
+      flex: 1;
+      position: relative;
+    }
+    .message-input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      padding-right: 120px;
+      border: 2px solid #e9ecef;
+      border-radius: 25px;
+      resize: none;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    .message-input:focus {
+      outline: none;
+      border-color: #4e54c8;
+      box-shadow: 0 0 0 3px rgba(78, 84, 200, 0.1);
+    }
+    .attachment-button {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      color: #6c757d;
+      font-size: 1.25rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+    .attachment-button:hover {
+      background: #f0f0f0;
+      color: #4e54c8;
+    }
+    .send-button {
+      background: linear-gradient(135deg, #4e54c8, #8f94fb);
+      border: none;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      border-radius: 25px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .send-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(78, 84, 200, 0.3);
+    }
+    .send-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .attachment-preview {
+      margin-top: 0.75rem;
+      padding: 0.75rem;
+      background: #f8f9fa;
+      border-radius: 10px;
+      display: none;
+    }
+    .attachment-preview.active {
+      display: block;
+    }
+    .attachment-preview-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+    .attachment-preview-item:last-child {
+      margin-bottom: 0;
+    }
+    .attachment-preview-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+    }
+    .attachment-preview-remove {
+      background: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .empty-chat {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #6c757d;
+    }
+    .empty-chat i {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+    .login-prompt {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+      border-radius: 15px;
+      border: 2px dashed #f39c12;
+    }
+    .chat-messages::-webkit-scrollbar {
+      width: 6px;
+    }
+    .chat-messages::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 3px;
+    }
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+    #file-input {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+{% include 'includes/header.html' %}
+
+<div class="support-container">
+  <div class="support-wrapper">
+    <!-- Левая колонка: FAQ -->
+    <div>
+      <div class="faq-card">
+        <div class="faq-header">
+          <h2><i class="bi bi-chat-dots"></i> Часто задаваемые вопросы</h2>
+        </div>
+        
+        <!-- Поиск по FAQ -->
+        <div class="search-box">
+          <i class="bi bi-search"></i>
+          <input type="text" id="faq-search" class="form-control" placeholder="Поиск по вопросам...">
+        </div>
+        <div id="faq-results"></div>
+        
+        <!-- FAQ по категориям -->
+        <div id="faq-categories">
+          {% for category, faqs in faqs_by_category.items %}
+          <div class="faq-category">
+            <div class="faq-category-title">
+              {% if category == 'delivery' %}
+                <i class="bi bi-truck"></i>
+              {% elif category == 'return' %}
+                <i class="bi bi-arrow-counterclockwise"></i>
+              {% elif category == 'payment' %}
+                <i class="bi bi-credit-card"></i>
+              {% elif category == 'order' %}
+                <i class="bi bi-cart-check"></i>
+              {% elif category == 'loyalty' %}
+                <i class="bi bi-gift"></i>
+              {% else %}
+                <i class="bi bi-question-circle"></i>
+              {% endif %}
+              {% if category == 'delivery' %}Доставка
+              {% elif category == 'return' %}Возврат
+              {% elif category == 'payment' %}Оплата
+              {% elif category == 'order' %}Заказ
+              {% elif category == 'loyalty' %}Программа лояльности
+              {% else %}Другое{% endif %}
+            </div>
+            {% for faq in faqs %}
+            <div class="faq-item" onclick="toggleFaq(this)">
+              <div class="faq-question">
+                <i class="bi bi-question-circle-fill text-primary"></i> {{ faq.question }}
+              </div>
+              <div class="faq-answer">{{ faq.answer }}</div>
+            </div>
+            {% endfor %}
+          </div>
+          {% empty %}
+          <p class="text-muted text-center py-4">FAQ пока нет. Они будут добавлены администратором.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Правая колонка: Чат -->
+    <div>
+      <div class="chat-wrapper">
+        <div class="chat-header">
+          <div>
+            <h3><i class="bi bi-headset"></i> Чат поддержки</h3>
+            <div class="chat-status">
+              <span class="status-dot"></span>
+              <span>Онлайн</span>
+            </div>
+          </div>
+          {% if user.is_authenticated and messages_list %}
+          <div class="text-white-50">
+            <small>Сообщений: {{ messages_list|length }}</small>
+          </div>
+          {% endif %}
+        </div>
+        
+        {% if user.is_authenticated %}
+        <div class="chat-messages" id="chat-messages">
+          {% if messages_list %}
+            {% for msg in messages_list %}
+              <!-- Сообщение пользователя -->
+              <div class="message user">
+                <div class="message-avatar">
+                  <i class="bi bi-person-fill"></i>
+                </div>
+                <div class="message-content">
+                  <div class="message-bubble">
+                    {{ msg.message|linebreaks }}
+                    {% if msg.attachment %}
+                      <div class="message-attachment">
+                        {% if msg.attachment.name|slice:"-4:"|lower in ".jpg,.jpeg,.png,.gif,.webp" %}
+                          <img src="{{ msg.attachment.url }}" alt="Прикрепленное изображение" class="attachment-image" onclick="openImageModal('{{ msg.attachment.url }}')">
+                        {% else %}
+                          <a href="{{ msg.attachment.url }}" target="_blank" class="attachment-file">
+                            <i class="bi bi-paperclip attachment-icon"></i>
+                            <div>
+                              <div style="font-weight: 600;">{{ msg.attachment.name|slice:"30:" }}</div>
+                              <small>Файл</small>
+                            </div>
+                            <i class="bi bi-download"></i>
+                          </a>
+                        {% endif %}
+                      </div>
+                    {% endif %}
+                  </div>
+                  <div class="message-time">
+                    {{ msg.created_at|date:"d.m.Y H:i" }}
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Ответ поддержки (если есть) -->
+              {% if msg.admin_response %}
+              <div class="message support">
+                <div class="message-avatar">
+                  <i class="bi bi-headset"></i>
+                </div>
+                <div class="message-content">
+                  <div class="message-support-name">Поддержка Lexicon</div>
+                  <div class="message-bubble">
+                    {{ msg.admin_response|linebreaks }}
+                  </div>
+                  <div class="message-time">
+                    {{ msg.updated_at|date:"d.m.Y H:i" }}
+                  </div>
+                </div>
+              </div>
+              {% else %}
+              <!-- Индикатор ожидания ответа -->
+              <div class="message support">
+                <div class="message-avatar">
+                  <i class="bi bi-headset"></i>
+                </div>
+                <div class="message-content">
+                  <div class="message-bubble" style="background: #fff3cd; color: #856404; border-left: 3px solid #ffc107;">
+                    <i class="bi bi-clock"></i> Ваше сообщение обрабатывается. Ответ появится здесь, как только мы его подготовим.
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="empty-chat">
+              <i class="bi bi-chat-left-dots"></i>
+              <h4>Начните переписку</h4>
+              <p>Отправьте сообщение ниже, и мы ответим вам в ближайшее время</p>
+            </div>
+          {% endif %}
+        </div>
+        
+        <div class="chat-input-area">
+          <form method="post" action="{% url 'support_send_message' %}" enctype="multipart/form-data" id="support-form">
+            {% csrf_token %}
+            <input type="file" id="file-input" name="attachment" accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar" onchange="handleFileSelect(this)">
+            
+            <div class="attachment-preview" id="attachment-preview"></div>
+            
+            <div class="input-group-custom">
+              <div class="message-input-wrapper">
+                <textarea 
+                  name="message" 
+                  id="message-input" 
+                  class="message-input" 
+                  rows="1" 
+                  placeholder="Введите сообщение..." 
+                  required
+                  onkeydown="handleKeyDown(event)"
+                  oninput="autoResize(this)"></textarea>
+                <button type="button" class="attachment-button" onclick="document.getElementById('file-input').click()" title="Прикрепить файл">
+                  <i class="bi bi-paperclip"></i>
+                </button>
+              </div>
+              <button type="submit" class="send-button" id="send-button">
+                <i class="bi bi-send"></i>
+                <span>Отправить</span>
+              </button>
+            </div>
+            <small class="text-muted d-block mt-2">Максимальный размер файла: 10MB. Разрешенные форматы: изображения, PDF, DOC, DOCX, TXT, ZIP, RAR</small>
+          </form>
+        </div>
+        {% else %}
+        <!-- Промпт для входа -->
+        <div class="chat-messages">
+          <div class="login-prompt">
+            <i class="bi bi-lock" style="font-size: 3rem; color: #f39c12; margin-bottom: 1rem;"></i>
+            <h4>Войдите, чтобы начать чат</h4>
+            <p class="mb-3">Для общения с поддержкой необходимо войти в систему</p>
+            <a href="{% url 'login' %}?next={% url 'support_chat' %}" class="btn btn-primary">
+              <i class="bi bi-box-arrow-in-right"></i> Войти
+            </a>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для просмотра изображения -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Изображение</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="modal-image" src="" alt="Изображение" style="max-width: 100%; border-radius: 8px;">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let selectedFile = null;
+
+  // Переключение FAQ
+  function toggleFaq(element) {
+    const isActive = element.classList.contains('active');
+    document.querySelectorAll('.faq-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    if (!isActive) {
+      element.classList.add('active');
+    }
+  }
+
+  // Поиск по FAQ
+  const searchInput = document.getElementById('faq-search');
+  const faqResults = document.getElementById('faq-results');
+  const faqCategories = document.getElementById('faq-categories');
+  let searchTimeout;
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    
+    if (query.length < 2) {
+      faqResults.innerHTML = '';
+      faqCategories.style.display = 'block';
+      return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+      fetch(`{% url 'search_faq' %}?q=${encodeURIComponent(query)}`)
+        .then(response => response.text())
+        .then(html => {
+          faqResults.innerHTML = html;
+          faqCategories.style.display = 'none';
+        })
+        .catch(error => {
+          console.error('Ошибка поиска:', error);
+        });
+    }, 300);
+  });
+
+  // Автоматическое изменение высоты textarea
+  function autoResize(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+  }
+
+  // Обработка нажатия Enter (Shift+Enter для новой строки)
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      document.getElementById('support-form').requestSubmit();
+    }
+  }
+
+  // Обработка выбора файла
+  function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      selectedFile = file;
+      
+      // Проверка размера
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Размер файла не должен превышать 10MB');
+        input.value = '';
+        selectedFile = null;
+        return;
+      }
+      
+      // Показываем превью
+      showFilePreview(file);
+    }
+  }
+
+  // Показ превью файла
+  function showFilePreview(file) {
+    const preview = document.getElementById('attachment-preview');
+    preview.innerHTML = '';
+    
+    const item = document.createElement('div');
+    item.className = 'attachment-preview-item';
+    
+    const info = document.createElement('div');
+    info.className = 'attachment-preview-info';
+    
+    // Определяем иконку по типу файла
+    let icon = 'bi-file-earmark';
+    if (file.type.startsWith('image/')) {
+      icon = 'bi-image';
+      // Показываем превью для изображений
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        img.style.maxWidth = '100px';
+        img.style.maxHeight = '100px';
+        img.style.borderRadius = '8px';
+        img.style.marginRight = '0.75rem';
+        info.insertBefore(img, info.firstChild);
+      };
+      reader.readAsDataURL(file);
+    } else if (file.type.includes('pdf')) {
+      icon = 'bi-file-earmark-pdf';
+    } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+      icon = 'bi-file-earmark-word';
+    } else if (file.type.includes('zip') || file.type.includes('rar')) {
+      icon = 'bi-file-earmark-zip';
+    }
+    
+    const iconEl = document.createElement('i');
+    iconEl.className = `bi ${icon}`;
+    iconEl.style.fontSize = '1.5rem';
+    iconEl.style.color = '#4e54c8';
+    
+    const textDiv = document.createElement('div');
+    textDiv.innerHTML = `
+      <div style="font-weight: 600;">${file.name}</div>
+      <small class="text-muted">${(file.size / 1024 / 1024).toFixed(2)} MB</small>
+    `;
+    
+    info.appendChild(iconEl);
+    info.appendChild(textDiv);
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'attachment-preview-remove';
+    removeBtn.innerHTML = '<i class="bi bi-x"></i>';
+    removeBtn.onclick = function() {
+      document.getElementById('file-input').value = '';
+      selectedFile = null;
+      preview.classList.remove('active');
+    };
+    
+    item.appendChild(info);
+    item.appendChild(removeBtn);
+    preview.appendChild(item);
+    preview.classList.add('active');
+  }
+
+  // Открытие модального окна с изображением
+  function openImageModal(imageUrl) {
+    document.getElementById('modal-image').src = imageUrl;
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    modal.show();
+  }
+
+  // Автопрокрутка вниз при загрузке
+  window.addEventListener('load', function() {
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages && chatMessages.children.length > 0) {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+  });
+
+  // Прокрутка вниз при отправке формы
+  const supportForm = document.getElementById('support-form');
+  if (supportForm) {
+    supportForm.addEventListener('submit', function() {
+      setTimeout(() => {
+        const chatMessages = document.getElementById('chat-messages');
+        if (chatMessages) {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+      }, 100);
+    });
+  }
+</script>
+
+</body>
+</html>

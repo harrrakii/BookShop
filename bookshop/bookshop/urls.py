@@ -21,6 +21,7 @@ from core.views import (
     order_success,
     stationery_list,
     update_cart_quantity,
+    author_detail,
 )
 from core.views_auth import (
     register_view,
@@ -34,6 +35,11 @@ from core.views_auth import (
     add_payment_card,
     delete_payment_card,
 )
+from core.views_support import (
+    support_chat,
+    support_send_message,
+    search_faq,
+)
 from core.views_manager import (
     manager_dashboard,
     manager_orders,
@@ -46,6 +52,8 @@ from core.views_manager import (
     manager_reports,
     manager_reports_export_csv,
     manager_reports_export_image,
+    manager_audit_log,
+    manager_audit_log_details,
 )
 from core.views_admin import (
     admin_export_data,
@@ -76,6 +84,7 @@ urlpatterns = [
     path('books/search/', search_books, name='search_books'),
     path('books/genre/<int:genre_id>/', books_by_genre, name='books_by_genre'),
     path('books/author/<int:author_id>/', books_by_author, name='books_by_author'),
+    path('author/<int:author_id>/', author_detail, name='author_detail'),
     path('books/publisher/<int:publisher_id>/', books_by_publisher, name='books_by_publisher'),
     path('stationery/', stationery_list, name='stationery_list'),
     path('products/<str:product_type>/<int:pk>/', product_detail, name='product_detail'),
@@ -85,6 +94,11 @@ urlpatterns = [
     path('cart/update/<str:product_type>/<int:pk>/', update_cart_quantity, name='update_cart_quantity'),
     path('checkout/', checkout, name='checkout'),
     path('checkout/success/<int:order_id>/', order_success, name='order_success'),
+
+    # Поддержка (только для авторизованных)
+    path('support/', support_chat, name='support_chat'),
+    path('support/send-message/', support_send_message, name='support_send_message'),
+    path('support/search-faq/', search_faq, name='search_faq'),
 
     # Авторизация
     path('register/', register_view, name='register'),
@@ -137,8 +151,10 @@ urlpatterns = [
     path('manager/reports/', manager_reports, name='manager_reports'),
     path('manager/reports/export-csv/', manager_reports_export_csv, name='manager_reports_export_csv'),
     path('manager/reports/export-image/', manager_reports_export_image, name='manager_reports_export_image'),
+    path('manager/audit-log/', manager_audit_log, name='manager_audit_log'),
     path('manager/export-data/', manager_export_data, name='manager_export_data'),
     path('manager/import-data/', manager_import_data, name='manager_import_data'),
+    path('manager/audit-log/', manager_audit_log, name='manager_audit_log'),
 
     # Админка - кастомные маршруты должны быть ПЕРЕД admin.site.urls
     path('admin/export-data/', admin_export_data, name='admin_export_data'),

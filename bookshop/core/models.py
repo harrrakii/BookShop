@@ -112,12 +112,33 @@ class Author(models.Model):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     middle_name = models.CharField(max_length=100, blank=True, null=True)
+    photo = models.ImageField(upload_to='authors/', blank=True, null=True, help_text="Фото автора")
+    birth_date = models.DateField(blank=True, null=True, help_text="Дата рождения")
+    birth_place = models.CharField(max_length=255, blank=True, null=True, help_text="Место рождения")
+    death_date = models.DateField(blank=True, null=True, help_text="Дата смерти")
+    death_place = models.CharField(max_length=255, blank=True, null=True, help_text="Место смерти")
+    biography = models.TextField(blank=True, null=True, help_text="Биография автора")
+    short_bio = models.TextField(blank=True, null=True, help_text="Краткая биография (для карточек)")
+
+    class Meta:
+        ordering = ('last_name', 'first_name')
 
     def __str__(self):
         full_name = f"{self.last_name} {self.first_name}"
         if self.middle_name:
             full_name += f" {self.middle_name}"
         return full_name
+    
+    def get_full_name(self):
+        """Возвращает полное имя автора"""
+        parts = [self.last_name, self.first_name]
+        if self.middle_name:
+            parts.insert(1, self.middle_name)
+        return " ".join(parts)
+    
+    def get_books(self):
+        """Возвращает все книги автора"""
+        return self.books.all()
 
 
 # --- Жанры ---
@@ -449,3 +470,152 @@ class LoyaltyCard(models.Model):
         if not self.card_number:
             self.card_number = self.generate_card_number()
         super().save(*args, **kwargs)
+
+
+# --- FAQ (Часто задаваемые вопросы) ---
+class FAQ(models.Model):
+    """Часто задаваемые вопросы для чата поддержки"""
+    question = models.CharField(max_length=500, help_text="Вопрос пользователя")
+    answer = models.TextField(help_text="Ответ на вопрос")
+    category = models.CharField(
+        max_length=50,
+        choices=[
+            ('delivery', 'Доставка'),
+            ('return', 'Возврат'),
+            ('payment', 'Оплата'),
+            ('order', 'Заказ'),
+            ('loyalty', 'Программа лояльности'),
+            ('other', 'Другое'),
+        ],
+        default='other'
+    )
+    order = models.PositiveIntegerField(default=0, help_text="Порядок отображения")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('order', 'question')
+        verbose_name = 'FAQ'
+        verbose_name_plural = 'FAQ'
+
+    def __str__(self):
+        return self.question[:50]
+
+
+# --- Сообщения поддержки ---
+class SupportMessage(models.Model):
+    """Сообщения пользователей в чат поддержки (когда нет ответа в FAQ)"""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="support_messages",
+        help_text="Пользователь (если авторизован)"
+    )
+    name = models.CharField(max_length=255, help_text="Имя пользователя")
+    email = models.EmailField(help_text="Email для ответа")
+    message = models.TextField(help_text="Текст сообщения")
+    attachment = models.FileField(
+        upload_to='support_messages/',
+        blank=True,
+        null=True,
+        help_text="Прикрепленный файл (фото, документ и т.д.)"
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('new', 'Новое'),
+            ('in_progress', 'В обработке'),
+            ('resolved', 'Решено'),
+            ('closed', 'Закрыто'),
+        ],
+        default='new'
+    )
+    admin_response = models.TextField(blank=True, null=True, help_text="Ответ администратора")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = 'Сообщение поддержки'
+        verbose_name_plural = 'Сообщения поддержки'
+
+    def __str__(self):
+        return f"Сообщение от {self.name} ({self.email})"
+
+
+# --- Журнал аудита ---
+class AuditLog(models.Model):
+    """Журнал аудита для отслеживания всех действий пользователей"""
+    ACTION_TYPES = (
+        # Действия с контентом
+        ('create', 'Создание'),
+        ('update', 'Изменение'),
+        ('delete', 'Удаление'),
+        ('view', 'Просмотр'),
+        ('download', 'Скачивание'),
+        # Действия пользователей
+        ('login', 'Вход в систему'),
+        ('logout', 'Выход из системы'),
+        ('register', 'Регистрация'),
+        ('password_reset', 'Сброс пароля'),
+        # Действия администратора
+        ('config', 'Изменение конфигурации'),
+        ('export', 'Экспорт данных'),
+        ('import', 'Импорт данных'),
+        # Прочие
+        ('other', 'Прочее'),
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs",
+        help_text="Пользователь, который выполнил действие (null для неавторизованных)"
+    )
+    action = models.CharField(max_length=20, choices=ACTION_TYPES, default='other', help_text="Тип действия")
+    model_name = models.CharField(max_length=100, blank=True, null=True, help_text="Название модели (если применимо)")
+    object_id = models.PositiveIntegerField(null=True, blank=True, help_text="ID объекта (если применимо)")
+    object_repr = models.CharField(max_length=255, blank=True, null=True, help_text="Строковое представление объекта")
+    
+    # Дополнительная информация о действии
+    description = models.TextField(blank=True, null=True, help_text="Описание действия")
+    url_path = models.CharField(max_length=500, blank=True, null=True, help_text="URL страницы")
+    
+    # Изменения в формате JSON (для create/update/delete)
+    changes = models.JSONField(default=dict, blank=True, help_text="Изменения (поле: {old: значение, new: значение})")
+    
+    # Дополнительная информация
+    ip_address = models.GenericIPAddressField(null=True, blank=True, help_text="IP адрес")
+    user_agent = models.TextField(blank=True, null=True, help_text="User Agent")
+    
+    created_at = models.DateTimeField(auto_now_add=True, help_text="Время действия")
+    
+    class Meta:
+        ordering = ('-created_at',)
+        verbose_name = 'Запись аудита'
+        verbose_name_plural = 'Журнал аудита'
+        indexes = [
+            models.Index(fields=['model_name', 'object_id']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_action_display()} {self.model_name} #{self.object_id} by {self.user or 'System'}"
+    
+    def get_changes_display(self):
+        """Возвращает форматированное отображение изменений"""
+        if not self.changes:
+            return "Нет изменений"
+        
+        result = []
+        for field, values in self.changes.items():
+            old_val = values.get('old', '—')
+            new_val = values.get('new', '—')
+            result.append(f"{field}: {old_val} → {new_val}")
+        
+        return "; ".join(result)

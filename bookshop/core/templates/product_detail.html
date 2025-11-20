@@ -81,7 +81,16 @@
       text-decoration: none !important;
     }
     .btn-link:focus {
-      box-shadow: none;
+box-shadow: none;
+    }
+    .author-link {
+      color: #4e54c8;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .author-link:hover {
+      color: #8f94fb;
+      text-decoration: underline;
     }
   </style>
 </head>
@@ -143,7 +152,9 @@
           <li><strong>ISBN:</strong> {{ product.isbn13 }}</li>
           <li><strong>Авторы:</strong>
             {% if product.authors.exists %}
-              {{ product.authors.all|join:", " }}
+              {% for author in product.authors.all %}
+                <a href="{% url 'author_detail' author.id %}" class="author-link">{{ author.get_full_name }}</a>{% if not forloop.last %}, {% endif %}
+              {% endfor %}
             {% else %}
               Не указаны
             {% endif %}
