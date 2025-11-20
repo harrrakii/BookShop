@@ -1,0 +1,382 @@
+{% load static %}
+{% load rating_tags %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Каталог книг — Lexicon</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: "Inter", sans-serif;
+    }
+    header {
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1rem 3rem;
+    }
+    .filter-section {
+      background: #ffffff;
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+    }
+    .filter-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+    .filter-card {
+      border: 2px solid #e9ecef;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      background: #ffffff;
+      display: block;
+    }
+    .filter-card:hover {
+      border-color: #6F2DBD;
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(111, 45, 189, 0.15);
+      color: inherit;
+      text-decoration: none;
+    }
+    .filter-card.active {
+      border-color: #6F2DBD;
+      background: linear-gradient(135deg, #6F2DBD 0%, #A663CC 100%);
+      color: white;
+    }
+    .filter-card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .filter-card-title {
+      font-weight: bold;
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+    }
+    .filter-card-count {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    .sort-section {
+      background: #ffffff;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 2rem;
+    }
+    .book-card {
+      border: none;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      height: 100%;
+    }
+    .book-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .book-cover {
+      height: 260px;
+      object-fit: cover;
+      background-color: #f3f3f3;
+    }
+    .rating-stars-small {
+      display: inline-flex;
+      gap: 1px;
+      font-size: 1rem;
+    }
+    .rating-stars-small .star {
+      color: #ffc107;
+    }
+    footer {
+      background: #fff;
+      text-align: center;
+      padding: 20px;
+      margin-top: 50px;
+      border-top: 1px solid #eee;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      min-width: 300px;
+      max-width: 500px;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    .notification.fade-out {
+      animation: slideOut 0.3s ease-out forwards;
+    }
+    @keyframes slideOut {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    .quantity-input-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .quantity-input-group input[type="number"] {
+      width: 80px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="notification alert alert-{{ message.tags|default:'success' }} alert-dismissible fade show" role="alert" data-auto-close="5000">
+      <strong>{{ message }}</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+{% include 'includes/header.html' %}
+
+<div class="container mt-5">
+  <h1 class="mb-4 text-center">Каталог книг</h1>
+
+  <!-- Секция фильтров -->
+  <div class="filter-section">
+    <h4 class="mb-3">Выберите категорию:</h4>
+    <div class="filter-cards">
+      <a href="{% url 'books_list' %}" class="filter-card {% if filter_type == 'all' %}active{% endif %}">
+        <div class="filter-card-icon">📚</div>
+        <div class="filter-card-title">Все книги</div>
+        <div class="filter-card-count">{{ books.count }} книг</div>
+      </a>
+      
+      <a href="{% url 'books_list' %}#genres" class="filter-card" onclick="event.preventDefault(); document.getElementById('genres-section').scrollIntoView({behavior: 'smooth'});">
+        <div class="filter-card-icon">🎭</div>
+        <div class="filter-card-title">Жанры</div>
+        <div class="filter-card-count">{{ genres.count }} жанров</div>
+      </a>
+      
+      <a href="{% url 'books_list' %}#authors" class="filter-card" onclick="event.preventDefault(); document.getElementById('authors-section').scrollIntoView({behavior: 'smooth'});">
+        <div class="filter-card-icon">✍️</div>
+        <div class="filter-card-title">Авторы</div>
+        <div class="filter-card-count">{{ authors.count }} авторов</div>
+      </a>
+      
+      <a href="{% url 'books_list' %}#publishers" class="filter-card" onclick="event.preventDefault(); document.getElementById('publishers-section').scrollIntoView({behavior: 'smooth'});">
+        <div class="filter-card-icon">🏢</div>
+        <div class="filter-card-title">Издатели</div>
+        <div class="filter-card-count">{{ publishers.count }} издателей</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Секция сортировки для "Все книги" -->
+  {% if filter_type == 'all' %}
+  <div class="sort-section">
+    <form method="get" action="{% url 'books_list' %}" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Сортировать по:</label>
+        <select name="sort" class="form-select">
+          <option value="rating" {% if sort_by == 'rating' %}selected{% endif %}>Рейтингу</option>
+          <option value="year" {% if sort_by == 'year' %}selected{% endif %}>Году</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Направление:</label>
+        <select name="order" class="form-select">
+          <option value="asc" {% if order == 'asc' %}selected{% endif %}>По возрастанию</option>
+          <option value="desc" {% if order == 'desc' %}selected{% endif %}>По убыванию</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Применить</button>
+      </div>
+      <div class="col-md-4 text-end">
+        <span class="text-muted">Найдено книг: {{ books.count }}</span>
+      </div>
+    </form>
+  </div>
+  {% endif %}
+
+  <!-- Секция со списком книг -->
+  {% if filter_type == 'all' %}
+  <div class="row g-4">
+    {% for book in books %}
+      <div class="col-md-3 d-flex">
+        <div class="card book-card flex-fill">
+          
+          {% if book.cover %}
+            <a href="{% url 'product_detail' 'book' book.id %}">
+              <img src="{{ book.cover.url }}" class="book-cover card-img-top" alt="Обложка книги {{ book.title }}">
+            </a>
+          {% else %}
+            <a href="{% url 'product_detail' 'book' book.id %}">
+              <img src="{% static 'img/no-cover.png' %}" class="book-cover card-img-top" alt="Нет обложки">
+            </a>
+          {% endif %}
+
+          <div class="card-body d-flex flex-column justify-content-between">
+            <div>
+              <h5 class="card-title">
+                <a href="{% url 'product_detail' 'book' book.id %}" class="text-decoration-none text-dark">
+                  {{ book.title }}
+                </a>
+              </h5>
+              <div class="mb-2">
+                <div class="rating-stars-small">
+                  {% with rating_int=book.rating|int_rating %}
+                    {% for i in "12345" %}
+                      {% if forloop.counter <= rating_int %}
+                        <span class="star filled">⭐</span>
+                      {% else %}
+                        <span class="star">☆</span>
+                      {% endif %}
+                    {% endfor %}
+                  {% endwith %}
+                </div>
+                <span class="text-muted small">({{ book.reviews.all.count|default:0 }})</span>
+              </div>
+              <p class="text-muted mb-1">Язык: {{ book.language }}</p>
+              <p class="fw-bold text-success mb-1">{{ book.price }} ₽</p>
+              <p class="small text-muted">В наличии: {{ book.stock_quantity }}</p>
+            </div>
+            <div class="d-flex flex-column gap-2 mt-2">
+              <a href="{% url 'product_detail' 'book' book.id %}" class="btn btn-outline-secondary w-100">Подробнее</a>
+              <form method="post" action="{% url 'add_to_cart' 'book' book.id %}" class="quantity-input-group">
+                {% csrf_token %}
+                <input type="number" 
+                       name="quantity" 
+                       value="1" 
+                       min="1" 
+                       max="{{ book.stock_quantity }}" 
+                       class="form-control form-control-sm" 
+                       id="quantity-{{ book.id }}"
+                       required>
+                <input type="hidden" name="next" value="{% url 'books_list' %}">
+                <button type="submit" class="btn btn-primary btn-sm flex-fill">Добавить в корзину</button>
+              </form>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-center">Пока нет книг 😔</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Секция жанров -->
+  <div id="genres-section" class="mt-5">
+    <h3 class="mb-4">Жанры</h3>
+    <div class="row g-3">
+      {% for genre in genres %}
+        {% if genre.books_count > 0 %}
+        <div class="col-md-3 col-sm-4 col-6">
+          <a href="{% url 'books_by_genre' genre.id %}" class="filter-card text-decoration-none">
+            <div class="filter-card-icon">📖</div>
+            <div class="filter-card-title">{{ genre.name }}</div>
+            <div class="filter-card-count">{{ genre.books_count }} книг</div>
+          </a>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Секция авторов -->
+  <div id="authors-section" class="mt-5">
+    <h3 class="mb-4">Авторы</h3>
+    <div class="row g-3">
+      {% for author in authors %}
+        {% if author.books_count > 0 %}
+        <div class="col-md-3 col-sm-4 col-6">
+          <a href="{% url 'books_by_author' author.id %}" class="filter-card text-decoration-none">
+            <div class="filter-card-icon">✍️</div>
+            <div class="filter-card-title">{{ author }}</div>
+            <div class="filter-card-count">{{ author.books_count }} книг</div>
+          </a>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Секция издателей -->
+  <div id="publishers-section" class="mt-5 mb-5">
+    <h3 class="mb-4">Издатели</h3>
+    <div class="row g-3">
+      {% for publisher in publishers %}
+        {% if publisher.books_count > 0 %}
+        <div class="col-md-3 col-sm-4 col-6">
+          <a href="{% url 'books_by_publisher' publisher.id %}" class="filter-card text-decoration-none">
+            <div class="filter-card-icon">🏢</div>
+            <div class="filter-card-title">{{ publisher.name }}</div>
+            <div class="filter-card-count">{{ publisher.books_count }} книг</div>
+          </a>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>© 2025 Lexicon — все права защищены.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Автоматическое закрытие уведомлений через 5 секунд
+  document.addEventListener('DOMContentLoaded', function() {
+    const notifications = document.querySelectorAll('.notification[data-auto-close]');
+    notifications.forEach(function(notification) {
+      const autoClose = parseInt(notification.getAttribute('data-auto-close'));
+      setTimeout(function() {
+        notification.classList.add('fade-out');
+        setTimeout(function() {
+          notification.remove();
+        }, 300);
+      }, autoClose);
+      
+      // Закрытие по клику на уведомление
+      notification.addEventListener('click', function(e) {
+        if (e.target !== notification.querySelector('.btn-close')) {
+          notification.classList.add('fade-out');
+          setTimeout(function() {
+            notification.remove();
+          }, 300);
+        }
+      });
+    });
+  });
+</script>
+
+</body>
+</html>

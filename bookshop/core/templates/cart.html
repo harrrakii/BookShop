@@ -1,0 +1,133 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Корзина — Lexicon</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f5f7fb;
+      font-family: "Inter", sans-serif;
+    }
+    header {
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1rem 3rem;
+    }
+    .cart-card {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+      padding: 2.5rem;
+    }
+    .product-thumb {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: 12px;
+      background: #f0f0f0;
+    }
+    .empty-state {
+      padding: 80px 20px;
+      text-align: center;
+      color: #6b7280;
+    }
+    .summary {
+      border-top: 1px solid #ececec;
+      padding-top: 1.5rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+
+{% include 'includes/header.html' %}
+
+<div class="container my-5">
+  {% if messages %}
+    <div class="mb-4">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} mb-2">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="cart-card">
+    <h1 class="fw-bold mb-4">🛒 Моя корзина</h1>
+
+    {% if items %}
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th scope="col">Товар</th>
+              <th scope="col" class="text-center">Цена</th>
+              <th scope="col" class="text-center">Количество</th>
+              <th scope="col" class="text-center">Сумма</th>
+              <th scope="col"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in items %}
+              <tr>
+                <td>
+                  <div class="d-flex align-items-center">
+                    {% if item.image %}
+                      <img src="{{ item.image }}" alt="{{ item.name }}" class="product-thumb me-3">
+                    {% else %}
+                      <img src="{% static 'img/no-cover.png' %}" alt="Нет изображения" class="product-thumb me-3">
+                    {% endif %}
+                    <div>
+                      <a href="{% url 'product_detail' item.product_type item.product_id %}" class="fw-semibold text-decoration-none">{{ item.name }}</a>
+                      <div class="text-muted small text-uppercase mt-1">{{ item.product_type }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-center fw-semibold">{{ item.price }} ₽</td>
+                <td class="text-center">
+                  <form method="post" action="{% url 'update_cart_quantity' item.product_type item.product_id %}" class="d-inline-flex align-items-center gap-2 justify-content-center">
+                    {% csrf_token %}
+                    <input type="number" name="quantity" value="{{ item.quantity }}" min="0" class="form-control form-control-sm" style="width: 80px;">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm">Обновить</button>
+                  </form>
+                </td>
+                <td class="text-center fw-semibold">{{ item.subtotal }} ₽</td>
+                <td class="text-end">
+                  <form method="post" action="{% url 'remove_from_cart' item.product_type item.product_id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link text-danger">Удалить</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="summary d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+        <div class="text-muted">Товаров: {{ total_quantity }}</div>
+        <div class="fs-3 fw-bold">Итого: {{ total }} ₽</div>
+      </div>
+
+      <div class="mt-4 d-flex flex-column flex-md-row gap-3">
+        <a href="{% url 'books_list' %}" class="btn btn-outline-primary flex-fill">Продолжить покупки</a>
+        <a href="{% url 'checkout' %}" class="btn btn-success flex-fill">Оформить заказ</a>
+      </div>
+    {% else %}
+      <div class="empty-state">
+        <h3 class="fw-semibold">В корзине пока пусто</h3>
+        <p>Выберите книги или канцтовары, которые хотите заказать.</p>
+        <div class="d-flex justify-content-center gap-3 mt-4">
+          <a href="{% url 'books_list' %}" class="btn btn-primary">Перейти в каталог книг</a>
+          <a href="{% url 'stationery_list' %}" class="btn btn-outline-primary">Посмотреть канцтовары</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+</body>
+</html>
+

@@ -1,0 +1,150 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Заказ #{{ order.id }}{% endblock %}
+{% block page_title %}📦 Заказ #{{ order.id }}{% endblock %}
+{% block page_description %}Детальная информация о заказе{% endblock %}
+
+{% block content %}
+  <div class="row g-4">
+    <!-- Основная информация -->
+    <div class="col-lg-8">
+      <div class="data-card">
+        <div class="data-card-header">
+          <h3 class="data-card-title">Информация о заказе</h3>
+        </div>
+        
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <strong>Статус заказа:</strong>
+            <form method="post" class="d-inline-block ms-2">
+              {% csrf_token %}
+              <select name="status" class="form-select form-select-sm d-inline-block" style="width: auto;" onchange="this.form.submit()">
+                {% for value, label in status_choices %}
+                  <option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+              </select>
+            </form>
+          </div>
+          <div class="col-md-6 text-end">
+            <span class="badge-manager badge-{{ order.status }}" style="font-size: 1rem;">
+              {{ order.get_status_display }}
+            </span>
+          </div>
+        </div>
+        
+        <hr>
+        
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <strong>Дата создания:</strong> {{ order.created_at|date:"d.m.Y H:i" }}
+          </div>
+          <div class="col-md-6">
+            <strong>Последнее обновление:</strong> {{ order.updated_at|date:"d.m.Y H:i" }}
+          </div>
+        </div>
+        
+        <hr>
+        
+        <h5 class="mb-3">Контактная информация:</h5>
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <p><strong>ФИО:</strong> {{ order.full_name }}</p>
+            <p><strong>Email:</strong> {{ order.email }}</p>
+            <p><strong>Телефон:</strong> {{ order.phone }}</p>
+          </div>
+          <div class="col-md-6">
+            {% if order.user %}
+              <p><strong>Пользователь:</strong> <a href="{% url 'manager_users' %}?q={{ order.user.email }}">{{ order.user.email }}</a></p>
+            {% else %}
+              <p><strong>Пользователь:</strong> Не зарегистрирован</p>
+            {% endif %}
+          </div>
+        </div>
+        
+        <hr>
+        
+        <h5 class="mb-3">Способ получения:</h5>
+        <p><strong>{{ order.get_fulfillment_type_display }}</strong></p>
+        {% if order.fulfillment_type == 'delivery' %}
+          {% if order.delivery_option %}
+            <p><strong>Вариант доставки:</strong> {{ order.delivery_option }}</p>
+          {% endif %}
+          <p><strong>Адрес доставки:</strong> {{ order.delivery_address|default:"Не указан" }}</p>
+        {% elif order.fulfillment_type == 'pickup' and order.pickup_point %}
+          <p><strong>ПВЗ:</strong> {{ order.pickup_point }}</p>
+        {% endif %}
+        
+        {% if order.comment %}
+          <hr>
+          <h5 class="mb-3">Комментарий:</h5>
+          <p>{{ order.comment }}</p>
+        {% endif %}
+      </div>
+      
+      <!-- Товары в заказе -->
+      <div class="data-card mt-4">
+        <div class="data-card-header">
+          <h3 class="data-card-title">Состав заказа</h3>
+        </div>
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Цена</th>
+              <th>Количество</th>
+              <th>Сумма</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in order.items.all %}
+              <tr>
+                <td>
+                  <strong>{{ item.name }}</strong>
+                  <div class="text-muted small">{{ item.product_type|title }}</div>
+                </td>
+                <td>{{ item.unit_price }} ₽</td>
+                <td>{{ item.quantity }}</td>
+                <td><strong>{{ item.subtotal }} ₽</strong></td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr style="background: var(--lavender-blue);">
+              <td colspan="3" class="text-end"><strong>Итого:</strong></td>
+              <td><strong style="font-size: 1.2rem;">{{ order.total_amount }} ₽</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Боковая панель -->
+    <div class="col-lg-4">
+      <div class="data-card">
+        <div class="data-card-header">
+          <h3 class="data-card-title">Действия</h3>
+        </div>
+        <div class="d-grid gap-2">
+          <a href="{% url 'manager_orders' %}" class="btn btn-manager btn-manager-secondary">
+            <i class="bi bi-arrow-left"></i> Вернуться к списку
+          </a>
+        </div>
+      </div>
+      
+      <div class="data-card mt-4">
+        <div class="data-card-header">
+          <h3 class="data-card-title">Статистика заказа</h3>
+        </div>
+        <div>
+          <p><strong>Товаров:</strong> {{ order.items.count }}</p>
+          <p><strong>Сумма:</strong> {{ order.total_amount }} ₽</p>
+          <p><strong>Создан:</strong> {{ order.created_at|date:"d.m.Y" }}</p>
+          <p><strong>Статус:</strong> {{ order.get_status_display }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}
+
+
+

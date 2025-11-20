@@ -1,0 +1,286 @@
+{% load static %}
+{% load rating_tags %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>
+    Lexicon —
+    {% if product_type == "book" %}
+      Книга
+    {% elif product_type == "stationery" %}
+      Товар
+    {% else %}
+      Товар
+    {% endif %}
+    {{ product }}
+  </title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: "Inter", sans-serif;
+    }
+    header {
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1rem 3rem;
+    }
+    .product-card {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      padding: 2rem;
+    }
+    .product-cover {
+      width: 100%;
+      max-height: 420px;
+      object-fit: cover;
+      border-radius: 18px;
+      background: #f3f3f3;
+    }
+    .badge-custom {
+      background: #e8edff;
+      color: #1e3a8a;
+    }
+    .rating-stars {
+      display: inline-flex;
+      gap: 2px;
+      font-size: 1.5rem;
+    }
+    .rating-stars .star {
+      color: #ffc107;
+    }
+    .rating-stars .star.filled {
+      filter: drop-shadow(0 0 2px rgba(255, 193, 7, 0.5));
+    }
+    .review-item {
+      transition: background-color 0.2s;
+      padding: 0.5rem 0;
+    }
+    .review-item:hover {
+      background-color: #f8f9fa;
+      padding: 1rem;
+      margin: -1rem -1rem 1rem -1rem;
+      border-radius: 8px;
+    }
+    .review-comment {
+      color: #495057;
+      line-height: 1.6;
+    }
+    .arrow-icon {
+      transition: transform 0.3s;
+      font-size: 0.8rem;
+      color: #6c757d;
+    }
+    .btn-link[aria-expanded="true"] .arrow-icon {
+      transform: rotate(180deg);
+    }
+    .btn-link:hover {
+      text-decoration: none !important;
+    }
+    .btn-link:focus {
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body>
+
+{% include 'includes/header.html' %}
+
+<div class="container my-5">
+  <div class="row g-4 product-card">
+    <div class="col-lg-5">
+      {% if product_type == "book" and product.cover %}
+        <img src="{{ product.cover.url }}" alt="{{ product.title }}" class="product-cover">
+      {% elif product_type == "stationery" and product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-cover">
+      {% else %}
+        <img src="{% static 'img/no-cover.png' %}" alt="Нет изображения" class="product-cover">
+      {% endif %}
+    </div>
+    <div class="col-lg-7">
+      <div class="d-flex justify-content-between align-items-start">
+        <h1 class="fw-bold">
+          {% if product_type == "book" %}
+            {{ product.title }}
+          {% else %}
+            {{ product.name }}
+          {% endif %}
+        </h1>
+        <span class="badge badge-custom text-uppercase">{{ product_type }}</span>
+      </div>
+
+      <div class="mb-3">
+        {% if product_type == "book" %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <div class="rating-stars">
+              {% with rating_int=product.rating|int_rating %}
+                {% for i in "12345" %}
+                  {% if forloop.counter <= rating_int %}
+                    <span class="star filled">⭐</span>
+                  {% else %}
+                    <span class="star">☆</span>
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+            </div>
+            <span class="text-muted">
+              {% if reviews %}
+                ({{ reviews|length }} {% if reviews|length == 1 %}отзыв{% elif reviews|length < 5 %}отзыва{% else %}отзывов{% endif %})
+              {% else %}
+                (0 отзывов)
+              {% endif %}
+            </span>
+          </div>
+        {% endif %}
+        <p class="fs-3 text-success fw-semibold mb-0">{{ product.price }} ₽</p>
+      </div>
+
+      <ul class="list-unstyled text-muted mb-4">
+        {% if product_type == "book" %}
+          <li><strong>ISBN:</strong> {{ product.isbn13 }}</li>
+          <li><strong>Авторы:</strong>
+            {% if product.authors.exists %}
+              {{ product.authors.all|join:", " }}
+            {% else %}
+              Не указаны
+            {% endif %}
+          </li>
+          <li><strong>Издательство:</strong> {{ product.publisher }}</li>
+          <li><strong>Год издания:</strong> {{ product.publication_year|default:"—" }}</li>
+          <li><strong>Жанры:</strong>
+            {% if product.genres.exists %}
+              {{ product.genres.all|join:", " }}
+            {% else %}
+              Не указаны
+            {% endif %}
+          </li>
+        {% else %}
+          <li><strong>Категория:</strong> {{ product.category|default:"—" }}</li>
+        {% endif %}
+        <li><strong>В наличии:</strong> {{ product.stock_quantity }}</li>
+      </ul>
+
+      <div class="mb-4">
+        <h5 class="fw-semibold">Описание</h5>
+        <p class="text-secondary">
+          {% if product.description %}
+            {{ product.description }}
+          {% else %}
+            Описание появится позже.
+          {% endif %}
+        </p>
+      </div>
+
+      <form method="post" action="{% url 'add_to_cart' product_type product.id %}" class="row gy-2 gx-3 align-items-center">
+        {% csrf_token %}
+        <div class="col-auto">
+          <label class="visually-hidden" for="quantity">Количество</label>
+          <input type="number" min="1" max="{{ product.stock_quantity }}" value="1" name="quantity" id="quantity" class="form-control">
+        </div>
+        <div class="col-auto">
+          <input type="hidden" name="next" value="{{ request.path }}">
+          <button type="submit" class="btn btn-primary btn-lg">Добавить в корзину</button>
+        </div>
+      </form>
+
+      <div class="mt-4">
+        <a href="{% if product_type == 'book' %}{% url 'books_list' %}{% else %}{% url 'stationery_list' %}{% endif %}" class="btn btn-outline-secondary">
+          ⬅ Вернуться к каталогу
+        </a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Раздел отзывов (только для книг) -->
+  {% if product_type == "book" %}
+    <div class="row mt-5">
+      <div class="col-12">
+        <div class="product-card">
+          <button class="btn btn-link p-0 text-decoration-none w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#reviewsSection" aria-expanded="false" aria-controls="reviewsSection">
+            <h2 class="fw-bold mb-0 d-flex align-items-center justify-content-between">
+              <span>💬 Отзывы 
+                {% if reviews %}
+                  <span class="badge bg-secondary ms-2">{{ reviews|length }}</span>
+                {% else %}
+                  <span class="badge bg-secondary ms-2">0</span>
+                {% endif %}
+              </span>
+              <span class="arrow-icon">▼</span>
+            </h2>
+          </button>
+          
+          <div class="collapse" id="reviewsSection">
+            <div class="mt-4">
+              {% if reviews %}
+                <div class="reviews-list">
+                  {% for review in reviews %}
+                    <div class="review-item {% if not forloop.last %}border-bottom pb-4 mb-4{% endif %}">
+                      <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                          <strong class="d-block mb-1">
+                            {% if review.user.username %}
+                              {{ review.user.username }}
+                            {% elif review.user.first_name or review.user.last_name %}
+                              {{ review.user.first_name }} {{ review.user.last_name }}
+                            {% else %}
+                              {{ review.user.email|truncatechars:20 }}
+                            {% endif %}
+                          </strong>
+                          <small class="text-muted">{{ review.created_at|date:"d.m.Y H:i" }}</small>
+                        </div>
+                        <div class="rating-stars">
+                          {% for i in "12345" %}
+                            {% if forloop.counter <= review.rating %}
+                              <span class="star filled">⭐</span>
+                            {% else %}
+                              <span class="star">☆</span>
+                            {% endif %}
+                          {% endfor %}
+                        </div>
+                      </div>
+                      <div class="review-comment mt-2">
+                        {% if review.comment %}
+                          <p class="mb-0">{{ review.comment }}</p>
+                        {% else %}
+                          <p class="text-muted mb-0">—</p>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <p class="text-muted mb-0">Отзывов пока нет. Будьте первым!</p>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Обновление иконки стрелки при раскрытии/сворачивании секции отзывов
+  document.addEventListener('DOMContentLoaded', function() {
+    const reviewsSection = document.getElementById('reviewsSection');
+    const arrowIcon = document.querySelector('.arrow-icon');
+    
+    if (reviewsSection && arrowIcon) {
+      reviewsSection.addEventListener('show.bs.collapse', function() {
+        arrowIcon.style.transform = 'rotate(180deg)';
+      });
+      
+      reviewsSection.addEventListener('hide.bs.collapse', function() {
+        arrowIcon.style.transform = 'rotate(0deg)';
+      });
+    }
+  });
+</script>
+
+</body>
+</html>
+

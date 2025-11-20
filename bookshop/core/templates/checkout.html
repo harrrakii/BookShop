@@ -1,0 +1,604 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Оформление заказа — Lexicon</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #f8f9fb;
+      font-family: "Inter", sans-serif;
+    }
+    header {
+      background: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      padding: 1rem 3rem;
+    }
+    .checkout-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+    @media (min-width: 992px) {
+      .checkout-layout {
+        grid-template-columns: 2fr 1fr;
+      }
+    }
+    .card-soft {
+      background: #fff;
+      border-radius: 24px;
+      box-shadow: 0 10px 35px rgba(0,0,0,0.08);
+      padding: 2rem;
+    }
+    .badge-type {
+      font-size: 0.75rem;
+      letter-spacing: .06em;
+    }
+    .hidden {
+      display: none !important;
+    }
+    .delivery-price {
+      color: #28a745;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+
+{% include 'includes/header.html' %}
+
+<div class="container my-5">
+  {% if messages %}
+    <div class="mb-4">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }} mb-2 text-center">{{ message }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <h1 class="fw-bold mb-4">Оформление заказа</h1>
+  <div class="checkout-layout">
+    <div class="card-soft">
+      <form method="post" novalidate id="checkout-form">
+        {% csrf_token %}
+
+        <div class="mb-4">
+          <h5 class="fw-semibold">Контактные данные</h5>
+          <div class="row g-3 mt-2">
+            <div class="col-12">
+              <label class="form-label" for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+              {{ form.full_name }}
+              {% if form.full_name.errors %}
+                <div class="invalid-feedback d-block">{{ form.full_name.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{{ form.email.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+              {{ form.phone }}
+              {% if form.phone.errors %}
+                <div class="invalid-feedback d-block">{{ form.phone.errors|striptags }}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <h5 class="fw-semibold mb-3">{{ form.fulfillment_type.label }}</h5>
+          <div class="btn-group" role="group">
+            {% for radio in form.fulfillment_type %}
+              {{ radio.tag }}
+              <label class="btn btn-outline-primary" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+            {% endfor %}
+          </div>
+          {% if form.fulfillment_type.errors %}
+            <div class="invalid-feedback d-block">{{ form.fulfillment_type.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div id="delivery-fields" class="mb-4">
+          <h5 class="fw-semibold mb-3">Доставка</h5>
+          {% if user.is_authenticated and saved_addresses %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.saved_address.id_for_label }}">{{ form.saved_address.label }}</label>
+              {{ form.saved_address }}
+              {% if form.saved_address.errors %}
+                <div class="invalid-feedback d-block">{{ form.saved_address.errors|striptags }}</div>
+              {% endif %}
+              <small class="text-muted">Выберите сохраненный адрес или укажите новый ниже</small>
+            </div>
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.delivery_option.id_for_label }}">{{ form.delivery_option.label }}</label>
+            {{ form.delivery_option }}
+            {% if form.delivery_option.errors %}
+              <div class="invalid-feedback d-block">{{ form.delivery_option.errors|striptags }}</div>
+            {% endif %}
+            <small class="text-muted">Выберите желаемый срок доставки</small>
+            <div id="delivery-price-display" class="mt-2"></div>
+          </div>
+          <div id="new-address-fields" class="mb-3">
+            <h6 class="fw-semibold mb-3">Новый адрес</h6>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.delivery_city.id_for_label }}">{{ form.delivery_city.label }}</label>
+                {{ form.delivery_city }}
+                {% if form.delivery_city.errors %}
+                  <div class="invalid-feedback d-block">{{ form.delivery_city.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.delivery_street.id_for_label }}">{{ form.delivery_street.label }}</label>
+                {{ form.delivery_street }}
+                {% if form.delivery_street.errors %}
+                  <div class="invalid-feedback d-block">{{ form.delivery_street.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.delivery_building.id_for_label }}">{{ form.delivery_building.label }}</label>
+                {{ form.delivery_building }}
+                {% if form.delivery_building.errors %}
+                  <div class="invalid-feedback d-block">{{ form.delivery_building.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.delivery_apartment.id_for_label }}">{{ form.delivery_apartment.label }}</label>
+                {{ form.delivery_apartment }}
+                {% if form.delivery_apartment.errors %}
+                  <div class="invalid-feedback d-block">{{ form.delivery_apartment.errors|striptags }}</div>
+                {% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label" for="{{ form.delivery_postal_code.id_for_label }}">{{ form.delivery_postal_code.label }}</label>
+                {{ form.delivery_postal_code }}
+                {% if form.delivery_postal_code.errors %}
+                  <div class="invalid-feedback d-block">{{ form.delivery_postal_code.errors|striptags }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="pickup-fields" class="mb-4 hidden">
+          <h5 class="fw-semibold mb-3">Самовывоз</h5>
+          <div class="mb-3">
+            <label class="form-label" for="{{ form.pickup_point.id_for_label }}">{{ form.pickup_point.label }}</label>
+            {{ form.pickup_point }}
+            {% if form.pickup_point.errors %}
+              <div class="invalid-feedback d-block">{{ form.pickup_point.errors|striptags }}</div>
+            {% endif %}
+            <small class="text-muted">Мы покажем только доступные пункты выдачи</small>
+          </div>
+        </div>
+
+        <div class="mb-4" id="payment-section">
+          <h5 class="fw-semibold mb-3">Способ оплаты</h5>
+          {% if user.is_authenticated and payment_cards %}
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.payment_card.id_for_label }}">{{ form.payment_card.label }}</label>
+              {{ form.payment_card }}
+              {% if form.payment_card.errors %}
+                <div class="invalid-feedback d-block">{{ form.payment_card.errors|striptags }}</div>
+              {% endif %}
+              <small class="text-muted">Выберите сохраненную карту или укажите данные новой карты</small>
+            </div>
+            <div id="new-card-fields" class="mt-3">
+              <h6 class="fw-semibold mb-3">Новая карта</h6>
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.new_card_number.id_for_label }}">{{ form.new_card_number.label }}</label>
+                  {{ form.new_card_number }}
+                  {% if form.new_card_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_number.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.new_cardholder_name.id_for_label }}">{{ form.new_cardholder_name.label }}</label>
+                  {{ form.new_cardholder_name }}
+                  {% if form.new_cardholder_name.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_cardholder_name.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.new_card_expiry_month.id_for_label }}">{{ form.new_card_expiry_month.label }}</label>
+                  {{ form.new_card_expiry_month }}
+                  {% if form.new_card_expiry_month.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_expiry_month.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.new_card_expiry_year.id_for_label }}">{{ form.new_card_expiry_year.label }}</label>
+                  {{ form.new_card_expiry_year }}
+                  {% if form.new_card_expiry_year.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_expiry_year.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.new_card_cvv.id_for_label }}">{{ form.new_card_cvv.label }}</label>
+                  {{ form.new_card_cvv }}
+                  {% if form.new_card_cvv.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_cvv.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div id="new-card-fields">
+              <div class="row g-3">
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.new_card_number.id_for_label }}">{{ form.new_card_number.label }}</label>
+                  {{ form.new_card_number }}
+                  {% if form.new_card_number.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_number.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-12">
+                  <label class="form-label" for="{{ form.new_cardholder_name.id_for_label }}">{{ form.new_cardholder_name.label }}</label>
+                  {{ form.new_cardholder_name }}
+                  {% if form.new_cardholder_name.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_cardholder_name.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.new_card_expiry_month.id_for_label }}">{{ form.new_card_expiry_month.label }}</label>
+                  {{ form.new_card_expiry_month }}
+                  {% if form.new_card_expiry_month.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_expiry_month.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.new_card_expiry_year.id_for_label }}">{{ form.new_card_expiry_year.label }}</label>
+                  {{ form.new_card_expiry_year }}
+                  {% if form.new_card_expiry_year.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_expiry_year.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label" for="{{ form.new_card_cvv.id_for_label }}">{{ form.new_card_cvv.label }}</label>
+                  {{ form.new_card_cvv }}
+                  {% if form.new_card_cvv.errors %}
+                    <div class="invalid-feedback d-block">{{ form.new_card_cvv.errors|striptags }}</div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+
+        {% if user.is_authenticated and loyalty_card %}
+          <div class="mb-4">
+            <h5 class="fw-semibold mb-3">💳 Использовать бонусы</h5>
+            <div class="alert alert-info">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span>Доступно бонусов:</span>
+                <strong id="available-bonuses">{{ loyalty_card.balance|floatformat:0 }} ₽</strong>
+              </div>
+              <div class="mb-2">
+                <label class="form-label" for="use_bonuses">Сколько бонусов использовать:</label>
+                <input type="number" 
+                       name="use_bonuses" 
+                       id="use_bonuses" 
+                       class="form-control" 
+                       min="0" 
+                       max="{{ loyalty_card.balance|floatformat:0 }}" 
+                       value="0" 
+                       step="1">
+              </div>
+              <small class="text-muted">1 бонус = 1 рубль. Максимум можно использовать сумму заказа (с учетом доставки)</small>
+              <div class="mt-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="useMaxBonuses()">
+                  Использовать максимум
+                </button>
+              </div>
+            </div>
+          </div>
+        {% endif %}
+
+        <div class="mb-4">
+          <label class="form-label" for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+          {{ form.comment }}
+          {% if form.comment.errors %}
+            <div class="invalid-feedback d-block">{{ form.comment.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-success btn-lg w-100">Подтвердить заказ</button>
+      </form>
+    </div>
+
+    <aside class="card-soft">
+      <h5 class="fw-semibold mb-4">Состав заказа</h5>
+      <ul class="list-unstyled">
+        {% for item in items %}
+          <li class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <div class="fw-semibold">{{ item.name }}</div>
+              <div class="text-muted small badge bg-light text-dark badge-type mt-1">{{ item.product_type }}</div>
+            </div>
+            <div class="text-end">
+              <div>{{ item.quantity }} шт.</div>
+              <div class="fw-semibold">{{ item.subtotal }} ₽</div>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      <hr>
+      <div class="d-flex justify-content-between">
+        <span class="text-muted">Товаров:</span>
+        <span>{{ total_quantity }}</span>
+      </div>
+      <div id="delivery-cost-row" class="d-flex justify-content-between mt-2 hidden">
+        <span class="text-muted">Доставка:</span>
+        <span id="delivery-cost">0 ₽</span>
+      </div>
+      {% if user.is_authenticated and loyalty_card %}
+        <div id="bonuses-row" class="d-flex justify-content-between mt-2 hidden">
+          <span class="text-muted">Бонусы:</span>
+          <span id="bonuses-used" class="text-success">-0 ₽</span>
+        </div>
+      {% endif %}
+      <div class="d-flex justify-content-between fs-5 fw-bold mt-2">
+        <span>Итого:</span>
+        <span id="total-amount">{{ total }} ₽</span>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Данные о стоимости доставки
+  const deliveryOptions = {
+    {% for option in delivery_options %}
+      "{{ option.id }}": {
+        name: "{{ option.name }}",
+        price: {{ option.price }},
+        duration: "{{ option.min_days }}{% if option.min_days != option.max_days %}-{{ option.max_days }}{% endif %} дней"
+      }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  };
+
+  // Итоговая сумма товаров
+  const baseTotal = {{ total }};
+  
+  // Бонусы лояльности
+  {% if user.is_authenticated and loyalty_card %}
+    const maxAvailableBonuses = {{ loyalty_card.balance|floatformat:0 }};
+  {% else %}
+    const maxAvailableBonuses = 0;
+  {% endif %}
+
+  function updateTotal() {
+    const deliveryOptionSelect = document.getElementById('{{ form.delivery_option.id_for_label }}');
+    const deliveryCostRow = document.getElementById('delivery-cost-row');
+    const deliveryCost = document.getElementById('delivery-cost');
+    const bonusesRow = document.getElementById('bonuses-row');
+    const bonusesUsed = document.getElementById('bonuses-used');
+    const totalAmount = document.getElementById('total-amount');
+    const useBonusesInput = document.getElementById('use_bonuses');
+    
+    let currentTotal = baseTotal;
+    
+    // Добавляем стоимость доставки
+    if (deliveryOptionSelect && deliveryOptionSelect.value) {
+      const optionId = deliveryOptionSelect.value;
+      const option = deliveryOptions[optionId];
+      if (option) {
+        currentTotal += parseFloat(option.price);
+        if (deliveryCostRow) {
+          deliveryCostRow.classList.remove('hidden');
+          deliveryCost.textContent = `${option.price} ₽`;
+        }
+      }
+    } else {
+      if (deliveryCostRow) {
+        deliveryCostRow.classList.add('hidden');
+      }
+    }
+    
+    // Вычитаем использованные бонусы
+    let usedBonuses = 0;
+    if (useBonusesInput) {
+      usedBonuses = Math.min(
+        parseFloat(useBonusesInput.value) || 0,
+        maxAvailableBonuses,
+        currentTotal
+      );
+      if (usedBonuses > 0 && bonusesRow && bonusesUsed) {
+        bonusesRow.classList.remove('hidden');
+        bonusesUsed.textContent = `-${usedBonuses.toFixed(0)} ₽`;
+        currentTotal -= usedBonuses;
+      } else {
+        if (bonusesRow) {
+          bonusesRow.classList.add('hidden');
+        }
+      }
+    }
+    
+    // Обновляем итоговую сумму
+    totalAmount.textContent = `${Math.max(0, currentTotal).toFixed(2)} ₽`;
+  }
+
+  function toggleFulfillmentFields() {
+    const fulfillmentInputs = document.querySelectorAll('input[name="{{ form.fulfillment_type.name }}"]');
+    const deliverySection = document.getElementById('delivery-fields');
+    const pickupSection = document.getElementById('pickup-fields');
+    let currentValue = null;
+    
+    fulfillmentInputs.forEach((input) => {
+      if (input.checked) {
+        currentValue = input.value;
+      }
+      const label = document.querySelector(`label[for="${input.id}"]`);
+      if (label) {
+        label.classList.toggle('active', input.checked);
+      }
+    });
+
+    if (currentValue === "{{ delivery_choice }}") {
+      deliverySection.classList.remove('hidden');
+      pickupSection.classList.add('hidden');
+      updateDeliveryPrice();
+    } else if (currentValue === "{{ pickup_choice }}") {
+      pickupSection.classList.remove('hidden');
+      deliverySection.classList.add('hidden');
+      updateTotal();
+    } else {
+      deliverySection.classList.add('hidden');
+      pickupSection.classList.add('hidden');
+      updateTotal();
+    }
+  }
+
+  function updateDeliveryPrice() {
+    const deliveryOptionSelect = document.getElementById('{{ form.delivery_option.id_for_label }}');
+    const deliveryPriceDisplay = document.getElementById('delivery-price-display');
+    const useBonusesInput = document.getElementById('use_bonuses');
+
+    if (deliveryOptionSelect && deliveryOptionSelect.value) {
+      const optionId = deliveryOptionSelect.value;
+      const option = deliveryOptions[optionId];
+      
+      if (option) {
+        deliveryPriceDisplay.innerHTML = `<span class="delivery-price">Стоимость доставки: ${option.price} ₽</span>`;
+      } else {
+        deliveryPriceDisplay.innerHTML = '';
+      }
+    } else {
+      deliveryPriceDisplay.innerHTML = '';
+    }
+    
+    // Обновляем максимум бонусов при изменении доставки
+    if (useBonusesInput) {
+      let currentTotal = baseTotal;
+      if (deliveryOptionSelect && deliveryOptionSelect.value) {
+        const optionId = deliveryOptionSelect.value;
+        const option = deliveryOptions[optionId];
+        if (option) {
+          currentTotal += parseFloat(option.price);
+        }
+      }
+      const maxBonuses = Math.min(maxAvailableBonuses, currentTotal);
+      useBonusesInput.setAttribute('max', maxBonuses);
+      // Если текущее значение больше нового максимума, уменьшаем его
+      if (parseFloat(useBonusesInput.value) > maxBonuses) {
+        useBonusesInput.value = maxBonuses;
+      }
+    }
+    
+    updateTotal();
+  }
+
+  function hideDeliveryCost() {
+    updateTotal();
+  }
+  
+  function useMaxBonuses() {
+    const useBonusesInput = document.getElementById('use_bonuses');
+    if (useBonusesInput) {
+      const deliveryOptionSelect = document.getElementById('{{ form.delivery_option.id_for_label }}');
+      let currentTotal = baseTotal;
+      if (deliveryOptionSelect && deliveryOptionSelect.value) {
+        const optionId = deliveryOptionSelect.value;
+        const option = deliveryOptions[optionId];
+        if (option) {
+          currentTotal += parseFloat(option.price);
+        }
+      }
+      const maxBonuses = Math.min(maxAvailableBonuses, currentTotal);
+      useBonusesInput.value = maxBonuses;
+      updateTotal();
+    }
+  }
+
+  function toggleSavedAddress() {
+    const savedAddressSelect = document.getElementById('{{ form.saved_address.id_for_label }}');
+    const newAddressFields = document.getElementById('new-address-fields');
+    
+    if (savedAddressSelect && newAddressFields) {
+      if (savedAddressSelect.value && savedAddressSelect.value !== '') {
+        // Выбран сохраненный адрес - скрываем поля нового адреса
+        newAddressFields.classList.add('hidden');
+      } else {
+        // Выбран "Новый адрес" - показываем поля
+        newAddressFields.classList.remove('hidden');
+      }
+    }
+  }
+
+  function togglePaymentCard() {
+    const paymentCardSelect = document.getElementById('{{ form.payment_card.id_for_label }}');
+    const newCardFields = document.getElementById('new-card-fields');
+    
+    if (paymentCardSelect && newCardFields) {
+      if (paymentCardSelect.value && paymentCardSelect.value !== '' && paymentCardSelect.value !== 'None') {
+        // Выбрана сохраненная карта - скрываем поля новой карты
+        newCardFields.classList.add('hidden');
+      } else {
+        // Выбрана "Новая карта" или ничего не выбрано - показываем поля
+        newCardFields.classList.remove('hidden');
+      }
+    }
+    // Если нет paymentCardSelect (неавторизованный пользователь или нет сохраненных карт), 
+    // поля уже должны быть видны по умолчанию
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    toggleFulfillmentFields();
+    
+    const fulfillmentInputs = document.querySelectorAll('input[name="{{ form.fulfillment_type.name }}"]');
+    fulfillmentInputs.forEach((input) => {
+      input.addEventListener('change', toggleFulfillmentFields);
+    });
+
+    const deliveryOptionSelect = document.getElementById('{{ form.delivery_option.id_for_label }}');
+    if (deliveryOptionSelect) {
+      deliveryOptionSelect.addEventListener('change', updateDeliveryPrice);
+    }
+
+    // Обновление итоговой суммы при изменении бонусов
+    const useBonusesInput = document.getElementById('use_bonuses');
+    if (useBonusesInput) {
+      useBonusesInput.addEventListener('input', function() {
+        updateTotal();
+      });
+      useBonusesInput.addEventListener('change', function() {
+        updateTotal();
+      });
+    }
+    
+    // Инициализация итоговой суммы и максимума бонусов
+    updateDeliveryPrice(); // Это также обновит итоговую сумму и максимум бонусов
+
+    const savedAddressSelect = document.getElementById('{{ form.saved_address.id_for_label }}');
+    if (savedAddressSelect) {
+      savedAddressSelect.addEventListener('change', toggleSavedAddress);
+      toggleSavedAddress(); // Инициализация при загрузке
+    } else {
+      // Если нет сохраненных адресов, всегда показываем поля нового адреса
+      const newAddressFields = document.getElementById('new-address-fields');
+      if (newAddressFields) {
+        newAddressFields.classList.remove('hidden');
+      }
+    }
+
+    const paymentCardSelect = document.getElementById('{{ form.payment_card.id_for_label }}');
+    if (paymentCardSelect) {
+      paymentCardSelect.addEventListener('change', togglePaymentCard);
+      togglePaymentCard(); // Инициализация при загрузке
+    }
+    // Если нет paymentCardSelect, поля новой карты уже должны быть видны по умолчанию
+  });
+</script>
+
+</body>
+</html>

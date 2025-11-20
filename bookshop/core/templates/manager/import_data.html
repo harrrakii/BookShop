@@ -1,0 +1,64 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Импорт данных{% endblock %}
+{% block page_title %}📤 Импорт данных{% endblock %}
+{% block page_description %}Загрузка данных из JSON файла{% endblock %}
+
+{% block content %}
+  <div class="data-card">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Импорт данных из JSON</h3>
+    </div>
+    
+    <div class="alert alert-warning" role="alert">
+      <i class="bi bi-exclamation-triangle"></i>
+      <strong>Внимание!</strong> Импорт данных может перезаписать существующие записи. Рекомендуется сделать резервную копию перед импортом.
+    </div>
+    
+    <form method="post" enctype="multipart/form-data" class="mt-4">
+      {% csrf_token %}
+      <div class="mb-4">
+        <label for="json_file" class="form-label">
+          <strong>Выберите JSON файл:</strong>
+        </label>
+        <input type="file" name="json_file" id="json_file" accept=".json" class="form-control" required>
+        <div class="form-text">Выберите файл, экспортированный из системы</div>
+      </div>
+      
+      <div class="d-flex gap-3">
+        <button type="submit" class="btn btn-manager btn-manager-primary">
+          <i class="bi bi-upload"></i> Импортировать данные
+        </button>
+        <a href="{% url 'manager_dashboard' %}" class="btn btn-manager btn-manager-secondary">
+          <i class="bi bi-x-circle"></i> Отмена
+        </a>
+      </div>
+    </form>
+  </div>
+  
+  <div class="data-card mt-4">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Инструкция</h3>
+    </div>
+    <ul class="list-group list-group-flush">
+      <li class="list-group-item">
+        <i class="bi bi-check-circle text-success"></i>
+        Используйте файл, экспортированный через функцию "Выгрузить данные"
+      </li>
+      <li class="list-group-item">
+        <i class="bi bi-check-circle text-success"></i>
+        Файл должен быть в формате JSON
+      </li>
+      <li class="list-group-item">
+        <i class="bi bi-check-circle text-success"></i>
+        Импорт выполняется в транзакции - при ошибке все изменения откатываются
+      </li>
+      <li class="list-group-item">
+        <i class="bi bi-exclamation-triangle text-warning"></i>
+        Существующие записи с такими же ID будут обновлены
+      </li>
+    </ul>
+  </div>
+{% endblock %}
+
+

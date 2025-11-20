@@ -1,0 +1,225 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block title %}Отчеты{% endblock %}
+
+{% block content %}
+<div class="module">
+    <h1>Отчеты по заказам</h1>
+    
+    <!-- Фильтры -->
+    <form method="get" action="{% url 'admin_reports' %}" class="filter-form">
+        <fieldset class="module aligned">
+            <h2>Фильтры</h2>
+            <div class="form-row">
+                <div>
+                    <label for="date_from">Дата от:</label>
+                    <input type="date" name="date_from" id="date_from" value="{{ date_from }}">
+                </div>
+                <div>
+                    <label for="date_to">Дата до:</label>
+                    <input type="date" name="date_to" id="date_to" value="{{ date_to }}">
+                </div>
+                <div>
+                    <label for="status">Статус:</label>
+                    <select name="status" id="status">
+                        <option value="">Все</option>
+                        {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="fulfillment_type">Тип доставки:</label>
+                    <select name="fulfillment_type" id="fulfillment_type">
+                        <option value="">Все</option>
+                        {% for value, label in fulfillment_choices %}
+                        <option value="{{ value }}" {% if fulfillment_type == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="submit-row">
+                <input type="submit" value="Применить фильтры" class="default">
+                <a href="{% url 'admin_reports' %}" class="button">Сбросить</a>
+            </div>
+        </fieldset>
+    </form>
+    
+    <!-- Кнопки экспорта -->
+    <div class="export-buttons" style="margin: 20px 0;">
+        <a href="{% url 'admin_reports_export_csv' %}?{{ request.GET.urlencode }}" class="button" style="margin-right: 10px;">
+            Экспорт в CSV
+        </a>
+        <a href="{% url 'admin_reports_export_image' %}?{{ request.GET.urlencode }}" class="button">
+            Экспорт в PNG
+        </a>
+    </div>
+    
+    <!-- Общая статистика -->
+    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0;">
+        <div class="stat-card" style="padding: 15px; background: #f8f9fa; border-radius: 5px;">
+            <h3 style="margin: 0 0 10px 0; color: #666;">Всего заказов</h3>
+            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #417690;">{{ total_orders }}</p>
+        </div>
+        <div class="stat-card" style="padding: 15px; background: #f8f9fa; border-radius: 5px;">
+            <h3 style="margin: 0 0 10px 0; color: #666;">Общая выручка</h3>
+            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #417690;">{{ total_revenue|floatformat:2 }} ₽</p>
+        </div>
+        <div class="stat-card" style="padding: 15px; background: #f8f9fa; border-radius: 5px;">
+            <h3 style="margin: 0 0 10px 0; color: #666;">Средний чек</h3>
+            <p style="font-size: 24px; font-weight: bold; margin: 0; color: #417690;">{{ avg_order_value|floatformat:2 }} ₽</p>
+        </div>
+    </div>
+    
+    <!-- Статистика по статусам -->
+    <div class="module">
+        <h2>Статистика по статусам</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Статус</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in status_stats %}
+                <tr>
+                    <td>
+                        {% for value, label in status_choices %}
+                            {% if stat.status == value %}{{ label }}{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>{{ stat.count }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">Нет данных</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Статистика по типам доставки -->
+    <div class="module">
+        <h2>Статистика по типам доставки</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Тип доставки</th>
+                    <th>Количество</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in fulfillment_stats %}
+                <tr>
+                    <td>
+                        {% for value, label in fulfillment_choices %}
+                            {% if stat.fulfillment_type == value %}{{ label }}{% endif %}
+                        {% endfor %}
+                    </td>
+                    <td>{{ stat.count }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="2">Нет данных</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Топ товаров -->
+    <div class="module">
+        <h2>Топ-10 товаров</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Товар</th>
+                    <th>Тип</th>
+                    <th>Количество продано</th>
+                    <th>Выручка</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product in top_products %}
+                <tr>
+                    <td>{{ product.name }}</td>
+                    <td>{{ product.product_type }}</td>
+                    <td>{{ product.total_quantity }}</td>
+                    <td>{{ product.total_revenue|floatformat:2 }} ₽</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">Нет данных</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Список заказов -->
+    <div class="module">
+        <h2>Заказы (первые 100)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Дата</th>
+                    <th>Клиент</th>
+                    <th>Email</th>
+                    <th>Сумма</th>
+                    <th>Статус</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr>
+                    <td><a href="{% url 'admin:core_order_change' order.id %}">{{ order.id }}</a></td>
+                    <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                    <td>{{ order.full_name }}</td>
+                    <td>{{ order.email }}</td>
+                    <td>{{ order.total_amount|floatformat:2 }} ₽</td>
+                    <td>{{ order.get_status_display }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">Нет заказов</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+.filter-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+.filter-form .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+.filter-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.filter-form input, .filter-form select {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 3px;
+}
+.export-buttons {
+    text-align: right;
+}
+</style>
+{% endblock %}
+

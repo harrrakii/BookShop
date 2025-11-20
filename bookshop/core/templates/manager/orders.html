@@ -1,0 +1,104 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Заказы{% endblock %}
+{% block page_title %}📦 Управление заказами{% endblock %}
+{% block page_description %}Просмотр и управление всеми заказами{% endblock %}
+
+{% block content %}
+  <!-- Фильтры -->
+  <div class="data-card mb-4">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label">Статус:</label>
+        <select name="status" class="form-select">
+          <option value="">Все статусы</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">Поиск:</label>
+        <input type="text" name="q" class="form-control" placeholder="Поиск по имени, email, телефону, ID..." value="{{ search_query }}">
+      </div>
+      <div class="col-md-2">
+        <button type="submit" class="btn btn-manager btn-manager-primary w-100">
+          <i class="bi bi-search"></i> Найти
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Список заказов -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Список заказов ({{ orders.count }})</h3>
+    </div>
+    
+    {% if orders %}
+      <div class="table-responsive">
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Клиент</th>
+              <th>Товары</th>
+              <th>Способ получения</th>
+              <th>Сумма</th>
+              <th>Статус</th>
+              <th>Дата</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+              <tr>
+                <td><strong>#{{ order.id }}</strong></td>
+                <td>
+                  <div><strong>{{ order.full_name }}</strong></div>
+                  <div class="text-muted small">{{ order.email }}</div>
+                  <div class="text-muted small">{{ order.phone }}</div>
+                </td>
+                <td>
+                  <div class="small">
+                    {% for item in order.items.all|slice:":3" %}
+                      {{ item.name }} × {{ item.quantity }}<br>
+                    {% endfor %}
+                    {% if order.items.count > 3 %}
+                      <span class="text-muted">...и еще {{ order.items.count|add:"-3" }}</span>
+                    {% endif %}
+                  </div>
+                </td>
+                <td>
+                  {{ order.get_fulfillment_type_display }}
+                  {% if order.fulfillment_type == 'delivery' and order.delivery_option %}
+                    <div class="text-muted small">{{ order.delivery_option }}</div>
+                  {% elif order.fulfillment_type == 'pickup' and order.pickup_point %}
+                    <div class="text-muted small">{{ order.pickup_point }}</div>
+                  {% endif %}
+                </td>
+                <td><strong>{{ order.total_amount }} ₽</strong></td>
+                <td>
+                  <span class="badge-manager badge-{{ order.status }}">
+                    {{ order.get_status_display }}
+                  </span>
+                </td>
+                <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                  <a href="{% url 'manager_order_detail' order.id %}" class="btn btn-sm btn-manager btn-manager-primary">
+                    Детали
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center py-4">Заказов не найдено</p>
+    {% endif %}
+  </div>
+{% endblock %}
+
+
+

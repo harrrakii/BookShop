@@ -1,0 +1,182 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Дашборд{% endblock %}
+{% block page_title %}📊 Дашборд{% endblock %}
+{% block page_description %}Общая статистика и ключевые метрики{% endblock %}
+
+{% block content %}
+  <!-- Статистические карточки -->
+  <div class="stats-grid">
+    <!-- Заказы -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-title">Всего заказов</div>
+        <div class="stat-card-icon primary">
+          <i class="bi bi-cart-check"></i>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ total_orders }}</div>
+      <div class="stat-card-change">
+        Сегодня: {{ today_orders }} | За неделю: {{ week_orders }} | За месяц: {{ month_orders }}
+      </div>
+    </div>
+    
+    <!-- Выручка -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-title">Общая выручка</div>
+        <div class="stat-card-icon success">
+          <i class="bi bi-currency-exchange"></i>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ total_revenue|floatformat:0 }} ₽</div>
+      <div class="stat-card-change">
+        Сегодня: {{ today_revenue|floatformat:0 }} ₽ | За неделю: {{ week_revenue|floatformat:0 }} ₽ | За месяц: {{ month_revenue|floatformat:0 }} ₽
+      </div>
+    </div>
+    
+    <!-- Товары -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-title">Товары</div>
+        <div class="stat-card-icon info">
+          <i class="bi bi-box-seam"></i>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ total_books|add:total_stationery }}</div>
+      <div class="stat-card-change">
+        Книг: {{ total_books }} | Канцтоваров: {{ total_stationery }}
+        {% if low_stock_books > 0 or low_stock_stationery > 0 %}
+          <span class="text-danger">⚠ Низкий остаток: {{ low_stock_books|add:low_stock_stationery }}</span>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Пользователи -->
+    <div class="stat-card">
+      <div class="stat-card-header">
+        <div class="stat-card-title">Пользователи</div>
+        <div class="stat-card-icon warning">
+          <i class="bi bi-people"></i>
+        </div>
+      </div>
+      <div class="stat-card-value">{{ total_users }}</div>
+      <div class="stat-card-change">
+        Карт лояльности: {{ total_loyalty_cards }} | Отзывов: {{ total_reviews }}
+      </div>
+    </div>
+  </div>
+  
+  <div class="row g-4">
+    <!-- Заказы по статусам -->
+    <div class="col-lg-6">
+      <div class="data-card">
+        <div class="data-card-header">
+          <h3 class="data-card-title">Заказы по статусам</h3>
+        </div>
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>Статус</th>
+              <th>Количество</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for stat in orders_by_status %}
+              <tr>
+                <td>
+                  <span class="badge-manager badge-{{ stat.status }}">
+                    {{ stat.status|title }}
+                  </span>
+                </td>
+                <td><strong>{{ stat.count }}</strong></td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted">Нет данных</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Топ товаров -->
+    <div class="col-lg-6">
+      <div class="data-card">
+        <div class="data-card-header">
+          <h3 class="data-card-title">Топ-5 книг по продажам</h3>
+        </div>
+        {% if top_books %}
+          <div class="list-group list-group-flush">
+            {% for book in top_books %}
+              <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                  <strong>{{ book.title }}</strong>
+                  <div class="text-muted small">Продано: {{ book.total_sold }} шт.</div>
+                </div>
+                <span class="badge badge-manager badge-manager-primary">{{ book.total_sold }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-muted text-center py-3">Нет данных о продажах</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Последние заказы -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Последние заказы</h3>
+      <a href="{% url 'manager_orders' %}" class="btn btn-manager btn-manager-primary">
+        Все заказы <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+    {% if recent_orders %}
+      <div class="table-responsive">
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Клиент</th>
+              <th>Способ получения</th>
+              <th>Сумма</th>
+              <th>Статус</th>
+              <th>Дата</th>
+              <th>Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in recent_orders %}
+              <tr>
+                <td><strong>#{{ order.id }}</strong></td>
+                <td>
+                  {{ order.full_name }}
+                  <div class="text-muted small">{{ order.email }}</div>
+                </td>
+                <td>{{ order.get_fulfillment_type_display }}</td>
+                <td><strong>{{ order.total_amount }} ₽</strong></td>
+                <td>
+                  <span class="badge-manager badge-{{ order.status }}">
+                    {{ order.get_status_display }}
+                  </span>
+                </td>
+                <td>{{ order.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                  <a href="{% url 'manager_order_detail' order.id %}" class="btn btn-sm btn-manager btn-manager-secondary">
+                    Детали
+                  </a>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center py-4">Заказов пока нет</p>
+    {% endif %}
+  </div>
+{% endblock %}
+

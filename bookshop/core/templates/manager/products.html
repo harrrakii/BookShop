@@ -1,0 +1,126 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Товары{% endblock %}
+{% block page_title %}📦 Управление товарами{% endblock %}
+{% block page_description %}Просмотр и управление товарами{% endblock %}
+
+{% block content %}
+  <!-- Фильтры -->
+  <div class="data-card mb-4">
+    <div class="d-flex gap-3 align-items-center">
+      <a href="{% url 'manager_products' %}?type=books" 
+         class="btn btn-manager {% if product_type == 'books' %}btn-manager-primary{% else %}btn-manager-secondary{% endif %}">
+        <i class="bi bi-book"></i> Книги ({{ total_books }})
+      </a>
+      <a href="{% url 'manager_products' %}?type=stationery" 
+         class="btn btn-manager {% if product_type == 'stationery' %}btn-manager-primary{% else %}btn-manager-secondary{% endif %}">
+        <i class="bi bi-pencil"></i> Канцтовары ({{ total_stationery }})
+      </a>
+      {% if low_stock > 0 %}
+        <div class="ms-auto">
+          <span class="badge-manager" style="background: #fee2e2; color: #991b1b;">
+            ⚠ Низкий остаток: {{ low_stock }}
+          </span>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+  
+  <!-- Список товаров -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <h3 class="data-card-title">
+        {% if product_type == 'stationery' %}
+          Канцтовары ({{ products.count }})
+        {% else %}
+          Книги ({{ products.count }})
+        {% endif %}
+      </h3>
+      <a href="{% url 'admin:core_book_changelist' %}" class="btn btn-manager btn-manager-primary" target="_blank">
+        <i class="bi bi-pencil-square"></i> Редактировать в админке
+      </a>
+    </div>
+    
+    {% if products %}
+      <div class="table-responsive">
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>ID</th>
+              {% if product_type == 'books' %}
+                <th>Обложка</th>
+                <th>Название</th>
+                <th>Авторы</th>
+                <th>Издатель</th>
+                <th>ISBN</th>
+              {% else %}
+                <th>Название</th>
+                <th>Категория</th>
+              {% endif %}
+              <th>Цена</th>
+              <th>Остаток</th>
+              {% if product_type == 'books' %}
+                <th>Рейтинг</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+              <tr {% if product.stock_quantity <= 5 %}style="background: #fef2f2;"{% endif %}>
+                <td><strong>#{{ product.id }}</strong></td>
+                {% if product_type == 'books' %}
+                  <td>
+                    {% if product.cover %}
+                      <img src="{{ product.cover.url }}" alt="{{ product.title }}" style="width: 50px; height: 70px; object-fit: cover; border-radius: 4px;">
+                    {% else %}
+                      <div style="width: 50px; height: 70px; background: #f0f0f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">Нет обложки</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <strong>{{ product.title }}</strong>
+                    <div class="text-muted small">{{ product.genres.all|join:", "|default:"—" }}</div>
+                  </td>
+                  <td>{{ product.authors.all|join:", "|default:"—" }}</td>
+                  <td>{{ product.publisher|default:"—" }}</td>
+                  <td class="small">{{ product.isbn13 }}</td>
+                {% else %}
+                  <td><strong>{{ product.name }}</strong></td>
+                  <td>{{ product.category|default:"—" }}</td>
+                {% endif %}
+                <td><strong>{{ product.price }} ₽</strong></td>
+                <td>
+                  {% if product.stock_quantity <= 5 %}
+                    <span class="badge-manager" style="background: #fee2e2; color: #991b1b;">
+                      ⚠ {{ product.stock_quantity }}
+                    </span>
+                  {% else %}
+                    <strong>{{ product.stock_quantity }}</strong>
+                  {% endif %}
+                </td>
+                {% if product_type == 'books' %}
+                  <td>
+                    <div class="d-flex align-items-center gap-1">
+                      {% for i in "12345" %}
+                        {% if forloop.counter <= product.rating|floatformat:0|add:"0" %}
+                          <span style="color: #fbbf24;">⭐</span>
+                        {% else %}
+                          <span style="color: #d1d5db;">☆</span>
+                        {% endif %}
+                      {% endfor %}
+                      <span class="small ms-1">({{ product.rating|floatformat:1 }})</span>
+                    </div>
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center py-4">Товаров не найдено</p>
+    {% endif %}
+  </div>
+{% endblock %}
+
+
+

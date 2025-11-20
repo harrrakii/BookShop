@@ -1,0 +1,497 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Панель менеджера{% endblock %} — Lexicon</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+  <style>
+    :root {
+      --lavender-blue: #C6D4FF;
+      --french-violet: #6F2DBD;
+      --amethyst: #A663CC;
+      --dark-liver: #594236;
+      --umber: #6F584B;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, var(--lavender-blue) 0%, #E8EDFF 100%);
+      min-height: 100vh;
+      color: var(--dark-liver);
+    }
+    
+    .manager-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 280px;
+      background: linear-gradient(180deg, var(--french-violet) 0%, var(--amethyst) 100%);
+      color: white;
+      padding: 2rem 0;
+      box-shadow: 4px 0 20px rgba(111, 45, 189, 0.2);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    
+    .sidebar-header {
+      padding: 0 1.5rem 2rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 2rem;
+    }
+    
+    .sidebar-header h3 {
+      font-weight: bold;
+      font-size: 1.5rem;
+      margin: 0;
+    }
+    
+    .sidebar-header p {
+      font-size: 0.85rem;
+      opacity: 0.9;
+      margin: 0.5rem 0 0;
+    }
+    
+    .sidebar-menu {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .sidebar-menu-item {
+      margin: 0.25rem 0;
+    }
+    
+    .sidebar-menu-link {
+      display: flex;
+      align-items: center;
+      padding: 0.875rem 1.5rem;
+      color: rgba(255, 255, 255, 0.9);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      border-left: 3px solid transparent;
+    }
+    
+    .sidebar-menu-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-left-color: white;
+      color: white;
+      text-decoration: none;
+    }
+    
+    .sidebar-menu-link.active {
+      background: rgba(255, 255, 255, 0.2);
+      border-left-color: white;
+      color: white;
+      font-weight: 600;
+    }
+    
+    .sidebar-menu-link i {
+      margin-right: 0.75rem;
+      font-size: 1.2rem;
+      width: 24px;
+      text-align: center;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      max-width: calc(100vw - 280px);
+    }
+    
+    .content-header {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(111, 45, 189, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .content-header h1 {
+      font-size: 1.75rem;
+      font-weight: bold;
+      color: var(--french-violet);
+      margin: 0;
+    }
+    
+    /* Stats Cards */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: white;
+      border-radius: 16px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 20px rgba(111, 45, 189, 0.08);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 30px rgba(111, 45, 189, 0.15);
+    }
+    
+    .stat-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .stat-card-title {
+      font-size: 0.9rem;
+      color: var(--umber);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    
+    .stat-card-icon.primary {
+      background: linear-gradient(135deg, var(--french-violet), var(--amethyst));
+      color: white;
+    }
+    
+    .stat-card-icon.success {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+    }
+    
+    .stat-card-icon.warning {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+    }
+    
+    .stat-card-icon.info {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+    }
+    
+    .stat-card-value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--french-violet);
+      margin-bottom: 0.25rem;
+    }
+    
+    .stat-card-change {
+      font-size: 0.85rem;
+      color: var(--umber);
+    }
+    
+    .stat-card-change.positive {
+      color: #10b981;
+    }
+    
+    .stat-card-change.negative {
+      color: #ef4444;
+    }
+    
+    /* Data Cards */
+    .data-card {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 4px 20px rgba(111, 45, 189, 0.08);
+      margin-bottom: 2rem;
+    }
+    
+    .data-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--lavender-blue);
+    }
+    
+    .data-card-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: var(--french-violet);
+      margin: 0;
+    }
+    
+    /* Tables */
+    .table-manager {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .table-manager thead {
+      background: linear-gradient(135deg, var(--lavender-blue), #E8EDFF);
+    }
+    
+    .table-manager thead th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--french-violet);
+      border-bottom: 2px solid var(--amethyst);
+    }
+    
+    .table-manager tbody tr {
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.2s ease;
+    }
+    
+    .table-manager tbody tr:hover {
+      background: var(--lavender-blue);
+    }
+    
+    .table-manager tbody td {
+      padding: 1rem;
+    }
+    
+    /* Badges */
+    .badge-manager {
+      padding: 0.4rem 0.8rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    
+    .badge-new {
+      background: var(--lavender-blue);
+      color: var(--french-violet);
+    }
+    
+    .badge-processing {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    
+    .badge-shipped {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .badge-completed {
+      background: #d1fae5;
+      color: #065f46;
+    }
+    
+    .badge-cancelled {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    /* Buttons */
+    .btn-manager {
+      padding: 0.625rem 1.25rem;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    
+    .btn-manager-primary {
+      background: linear-gradient(135deg, var(--french-violet), var(--amethyst));
+      color: white;
+    }
+    
+    .btn-manager-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(111, 45, 189, 0.3);
+      color: white;
+    }
+    
+    .btn-manager-secondary {
+      background: var(--lavender-blue);
+      color: var(--french-violet);
+    }
+    
+    .btn-manager-secondary:hover {
+      background: var(--amethyst);
+      color: white;
+    }
+    
+    /* User Info */
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--french-violet), var(--amethyst));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+    }
+    
+    @media (max-width: 768px) {
+      .manager-layout {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+      
+      .main-content {
+        max-width: 100%;
+      }
+    }
+  </style>
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <div class="manager-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h3>📊 Панель менеджера</h3>
+        <p>Lexicon Bookshop</p>
+      </div>
+      
+      <nav>
+        <ul class="sidebar-menu">
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_dashboard' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}">
+              <i class="bi bi-speedometer2"></i>
+              <span>Дашборд</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_orders' %}" class="sidebar-menu-link {% if 'manager_order' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="bi bi-cart-check"></i>
+              <span>Заказы</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_products' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_products' %}active{% endif %}">
+              <i class="bi bi-box-seam"></i>
+              <span>Товары</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_statistics' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_statistics' %}active{% endif %}">
+              <i class="bi bi-graph-up"></i>
+              <span>Статистика</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_users' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_users' %}active{% endif %}">
+              <i class="bi bi-people"></i>
+              <span>Пользователи</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_reports' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_reports' %}active{% endif %}">
+              <i class="bi bi-file-earmark-bar-graph"></i>
+              <span>Отчеты</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_export_data' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_export_data' %}active{% endif %}">
+              <i class="bi bi-download"></i>
+              <span>Выгрузить данные</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_import_data' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_import_data' %}active{% endif %}">
+              <i class="bi bi-upload"></i>
+              <span>Загрузить данные</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'admin:index' %}" class="sidebar-menu-link" target="_blank">
+              <i class="bi bi-gear"></i>
+              <span>Django Admin</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'home' %}" class="sidebar-menu-link">
+              <i class="bi bi-house"></i>
+              <span>На сайт</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="content-header">
+        <div>
+          <h1>{% block page_title %}Панель менеджера{% endblock %}</h1>
+          <p class="text-muted mb-0">{% block page_description %}Управление магазином{% endblock %}</p>
+        </div>
+        <div class="user-info">
+          <div class="user-avatar">
+            {% if user.username %}
+              {{ user.username|first|upper }}
+            {% elif user.email %}
+              {{ user.email|first|upper }}
+            {% else %}
+              M
+            {% endif %}
+          </div>
+          <div>
+            <div style="font-weight: 600;">{{ user.username|default:user.email }}</div>
+            <div style="font-size: 0.85rem; color: var(--umber);">
+              {% if user.is_admin %}Админ{% elif user.is_manager %}Менеджер{% else %}Пользователь{% endif %}
+            </div>
+          </div>
+          <a href="{% url 'logout' %}" class="btn btn-manager btn-manager-secondary ms-3">
+            <i class="bi bi-box-arrow-right"></i> Выйти
+          </a>
+        </div>
+      </div>
+      
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+      
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+

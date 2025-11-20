@@ -1,0 +1,104 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Пользователи{% endblock %}
+{% block page_title %}👥 Управление пользователями{% endblock %}
+{% block page_description %}Просмотр и управление пользователями{% endblock %}
+
+{% block content %}
+  <!-- Фильтры -->
+  <div class="data-card mb-4">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-6">
+        <label class="form-label">Поиск:</label>
+        <input type="text" name="q" class="form-control" placeholder="Поиск по email, имени, фамилии..." value="{{ search_query }}">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Фильтр:</label>
+        <select name="role" class="form-select">
+          <option value="">Все пользователи</option>
+          <option value="staff" {% if role_filter == 'staff' %}selected{% endif %}>Менеджеры</option>
+          <option value="active" {% if role_filter == 'active' %}selected{% endif %}>Активные</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-manager btn-manager-primary w-100">
+          <i class="bi bi-search"></i> Найти
+        </button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- Список пользователей -->
+  <div class="data-card">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Пользователи ({{ users.count }})</h3>
+      <a href="{% url 'admin:core_user_changelist' %}" class="btn btn-manager btn-manager-primary" target="_blank">
+        <i class="bi bi-pencil-square"></i> Редактировать в админке
+      </a>
+    </div>
+    
+    {% if users %}
+      <div class="table-responsive">
+        <table class="table-manager">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Пользователь</th>
+              <th>Email</th>
+              <th>ФИО</th>
+              <th>Телефон</th>
+              <th>Роль</th>
+              <th>Статус</th>
+              <th>Последний вход</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for user_obj in users %}
+              <tr>
+                <td><strong>#{{ user_obj.id }}</strong></td>
+                <td>
+                  {% if user_obj.username %}
+                    {{ user_obj.username }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>{{ user_obj.email }}</td>
+                <td>{{ user_obj.get_full_name|default:"—" }}</td>
+                <td>{{ user_obj.phone|default:"—" }}</td>
+                <td>
+                  {% if user_obj.is_staff %}
+                    <span class="badge-manager badge-manager-primary">Менеджер</span>
+                  {% elif user_obj.role %}
+                    <span class="badge-manager badge-manager-secondary">{{ user_obj.role.name }}</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if user_obj.is_active %}
+                    <span class="badge-manager" style="background: #d1fae5; color: #065f46;">Активен</span>
+                  {% else %}
+                    <span class="badge-manager" style="background: #fee2e2; color: #991b1b;">Неактивен</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if user_obj.last_login %}
+                    {{ user_obj.last_login|date:"d.m.Y H:i" }}
+                  {% else %}
+                    <span class="text-muted">Никогда</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="text-muted text-center py-4">Пользователей не найдено</p>
+    {% endif %}
+  </div>
+{% endblock %}
+
+
+
