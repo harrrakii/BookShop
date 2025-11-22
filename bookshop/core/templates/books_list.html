@@ -68,6 +68,90 @@
       font-size: 0.9rem;
       opacity: 0.8;
     }
+    /* Выпадающее меню */
+    .dropdown-menu-container {
+      position: relative;
+    }
+    .dropdown-menu-custom {
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      left: 0;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+      padding: 1.5rem;
+      z-index: 1000;
+      max-height: 500px;
+      overflow-y: auto;
+      display: none;
+      min-width: 350px;
+      width: max-content;
+      max-width: 600px;
+    }
+    /* Адаптивное позиционирование для последних элементов */
+    .filter-cards > .dropdown-menu-container:last-child .dropdown-menu-custom,
+    .filter-cards > .dropdown-menu-container:nth-last-child(2) .dropdown-menu-custom {
+      right: 0;
+      left: auto;
+    }
+    .dropdown-menu-custom.show {
+      display: block;
+      animation: fadeIn 0.2s ease-in;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .dropdown-menu-header {
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #6F2DBD;
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 2px solid #e9ecef;
+    }
+    .dropdown-menu-items {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+    .dropdown-menu-item {
+      padding: 0.75rem;
+      border-radius: 8px;
+      text-decoration: none;
+      color: #333;
+      transition: all 0.2s ease;
+      display: block;
+    }
+    .dropdown-menu-item:hover {
+      background-color: #f8f9fa;
+      color: #6F2DBD;
+      transform: translateX(5px);
+    }
+    .dropdown-menu-item-title {
+      font-weight: 500;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+    .dropdown-menu-item-count {
+      font-size: 0.85rem;
+      color: #6c757d;
+    }
+    .filter-card-with-dropdown {
+      position: relative;
+      cursor: pointer;
+    }
+    .filter-card-with-dropdown:hover {
+      border-color: #6F2DBD;
+      transform: translateY(-5px);
+      box-shadow: 0 8px 20px rgba(111, 45, 189, 0.15);
+    }
     .sort-section {
       background: #ffffff;
       padding: 1.5rem;
@@ -176,28 +260,72 @@
         <div class="filter-card-count">{{ books.count }} книг</div>
       </a>
       
-      <a href="{% url 'books_list' %}#genres" class="filter-card" onclick="event.preventDefault(); document.getElementById('genres-section').scrollIntoView({behavior: 'smooth'});">
+      <div class="filter-card filter-card-with-dropdown dropdown-menu-container" 
+           onmouseenter="showDropdown('genres-dropdown')" 
+           onmouseleave="hideDropdown('genres-dropdown')">
         <div class="filter-card-icon">🎭</div>
-        <div class="filter-card-title">Жанры</div>
+        <div class="filter-card-title">Жанры <span style="font-size: 0.8rem;">→</span></div>
         <div class="filter-card-count">{{ genres.count }} жанров</div>
-      </a>
+        <div class="dropdown-menu-custom" id="genres-dropdown">
+          <div class="dropdown-menu-header">Жанры</div>
+          <div class="dropdown-menu-items">
+            {% for genre in genres %}
+              {% if genre.books_count > 0 %}
+              <a href="{% url 'books_by_genre' genre.id %}" class="dropdown-menu-item">
+                <div class="dropdown-menu-item-title">{{ genre.name }}</div>
+                <div class="dropdown-menu-item-count">{{ genre.books_count }} книг</div>
+              </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
       
-      <a href="{% url 'books_list' %}#authors" class="filter-card" onclick="event.preventDefault(); document.getElementById('authors-section').scrollIntoView({behavior: 'smooth'});">
+      <div class="filter-card filter-card-with-dropdown dropdown-menu-container" 
+           onmouseenter="showDropdown('authors-dropdown')" 
+           onmouseleave="hideDropdown('authors-dropdown')">
         <div class="filter-card-icon">✍️</div>
-        <div class="filter-card-title">Авторы</div>
+        <div class="filter-card-title">Авторы <span style="font-size: 0.8rem;">→</span></div>
         <div class="filter-card-count">{{ authors.count }} авторов</div>
-      </a>
+        <div class="dropdown-menu-custom" id="authors-dropdown">
+          <div class="dropdown-menu-header">Авторы</div>
+          <div class="dropdown-menu-items">
+            {% for author in authors %}
+              {% if author.books_count > 0 %}
+              <a href="{% url 'books_by_author' author.id %}" class="dropdown-menu-item">
+                <div class="dropdown-menu-item-title">{{ author }}</div>
+                <div class="dropdown-menu-item-count">{{ author.books_count }} книг</div>
+              </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
       
-      <a href="{% url 'books_list' %}#publishers" class="filter-card" onclick="event.preventDefault(); document.getElementById('publishers-section').scrollIntoView({behavior: 'smooth'});">
+      <div class="filter-card filter-card-with-dropdown dropdown-menu-container" 
+           onmouseenter="showDropdown('publishers-dropdown')" 
+           onmouseleave="hideDropdown('publishers-dropdown')">
         <div class="filter-card-icon">🏢</div>
-        <div class="filter-card-title">Издатели</div>
+        <div class="filter-card-title">Издатели <span style="font-size: 0.8rem;">→</span></div>
         <div class="filter-card-count">{{ publishers.count }} издателей</div>
-      </a>
+        <div class="dropdown-menu-custom" id="publishers-dropdown">
+          <div class="dropdown-menu-header">Издатели</div>
+          <div class="dropdown-menu-items">
+            {% for publisher in publishers %}
+              {% if publisher.books_count > 0 %}
+              <a href="{% url 'books_by_publisher' publisher.id %}" class="dropdown-menu-item">
+                <div class="dropdown-menu-item-title">{{ publisher.name }}</div>
+                <div class="dropdown-menu-item-count">{{ publisher.books_count }} книг</div>
+              </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Секция сортировки для "Все книги" -->
-  {% if filter_type == 'all' %}
+  <!-- Секция сортировки -->
   <div class="sort-section">
     <form method="get" action="{% url 'books_list' %}" class="row g-3 align-items-end">
       <div class="col-md-3">
@@ -222,10 +350,8 @@
       </div>
     </form>
   </div>
-  {% endif %}
 
   <!-- Секция со списком книг -->
-  {% if filter_type == 'all' %}
   <div class="row g-4">
     {% for book in books %}
       <div class="col-md-3 d-flex">
@@ -290,61 +416,6 @@
       <p class="text-center">Пока нет книг 😔</p>
     {% endfor %}
   </div>
-  {% endif %}
-
-  <!-- Секция жанров -->
-  <div id="genres-section" class="mt-5">
-    <h3 class="mb-4">Жанры</h3>
-    <div class="row g-3">
-      {% for genre in genres %}
-        {% if genre.books_count > 0 %}
-        <div class="col-md-3 col-sm-4 col-6">
-          <a href="{% url 'books_by_genre' genre.id %}" class="filter-card text-decoration-none">
-            <div class="filter-card-icon">📖</div>
-            <div class="filter-card-title">{{ genre.name }}</div>
-            <div class="filter-card-count">{{ genre.books_count }} книг</div>
-          </a>
-        </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- Секция авторов -->
-  <div id="authors-section" class="mt-5">
-    <h3 class="mb-4">Авторы</h3>
-    <div class="row g-3">
-      {% for author in authors %}
-        {% if author.books_count > 0 %}
-        <div class="col-md-3 col-sm-4 col-6">
-          <a href="{% url 'books_by_author' author.id %}" class="filter-card text-decoration-none">
-            <div class="filter-card-icon">✍️</div>
-            <div class="filter-card-title">{{ author }}</div>
-            <div class="filter-card-count">{{ author.books_count }} книг</div>
-          </a>
-        </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- Секция издателей -->
-  <div id="publishers-section" class="mt-5 mb-5">
-    <h3 class="mb-4">Издатели</h3>
-    <div class="row g-3">
-      {% for publisher in publishers %}
-        {% if publisher.books_count > 0 %}
-        <div class="col-md-3 col-sm-4 col-6">
-          <a href="{% url 'books_by_publisher' publisher.id %}" class="filter-card text-decoration-none">
-            <div class="filter-card-icon">🏢</div>
-            <div class="filter-card-title">{{ publisher.name }}</div>
-            <div class="filter-card-count">{{ publisher.books_count }} книг</div>
-          </a>
-        </div>
-        {% endif %}
-      {% endfor %}
-    </div>
-  </div>
 </div>
 
 <footer>
@@ -373,6 +444,37 @@
             notification.remove();
           }, 300);
         }
+      });
+    });
+  });
+
+  // Функции для показа/скрытия выпадающих меню
+  function showDropdown(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+    if (dropdown) {
+      dropdown.classList.add('show');
+    }
+  }
+
+  function hideDropdown(dropdownId) {
+    const dropdown = document.getElementById(dropdownId);
+    if (dropdown) {
+      // Небольшая задержка, чтобы можно было перейти в меню
+      setTimeout(function() {
+        const container = dropdown.closest('.dropdown-menu-container');
+        if (!dropdown.matches(':hover') && !container.matches(':hover')) {
+          dropdown.classList.remove('show');
+        }
+      }, 150);
+    }
+  }
+
+  // Закрытие меню при уходе мыши
+  document.addEventListener('DOMContentLoaded', function() {
+    const dropdowns = document.querySelectorAll('.dropdown-menu-custom');
+    dropdowns.forEach(function(dropdown) {
+      dropdown.addEventListener('mouseleave', function() {
+        this.classList.remove('show');
       });
     });
   });
