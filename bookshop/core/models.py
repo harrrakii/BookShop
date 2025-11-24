@@ -472,6 +472,39 @@ class LoyaltyCard(models.Model):
         super().save(*args, **kwargs)
 
 
+# --- Избранное (Wishlist) ---
+class Wishlist(models.Model):
+    """Избранные товары пользователя"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='wishlist_items')
+    book = models.ForeignKey('Book', on_delete=models.CASCADE, null=True, blank=True)
+    stationery = models.ForeignKey('Stationery', on_delete=models.CASCADE, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [
+            ('user', 'book'),
+            ('user', 'stationery'),
+        ]
+        ordering = ('-created_at',)
+        verbose_name = 'Избранное'
+        verbose_name_plural = 'Избранное'
+
+    def __str__(self):
+        product = self.book or self.stationery
+        product_name = product.title if self.book else product.name
+        return f"{self.user.email} - {product_name}"
+
+    @property
+    def product(self):
+        """Возвращает продукт (книгу или канцтовар)"""
+        return self.book or self.stationery
+
+    @property
+    def product_type(self):
+        """Возвращает тип продукта"""
+        return 'book' if self.book else 'stationery'
+
+
 # --- FAQ (Часто задаваемые вопросы) ---
 class FAQ(models.Model):
     """Часто задаваемые вопросы для чата поддержки"""

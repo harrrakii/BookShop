@@ -1,48 +1,801 @@
 {% load static %}
 
-<header class="d-flex justify-content-between align-items-center flex-wrap">
-  <h3 class="fw-bold mb-0">📚 Lexicon</h3>
-  <div class="d-flex align-items-center gap-2 flex-wrap">
+<header class="main-header">
+  <div class="header-top">
+    <div class="container-fluid">
+      <div class="header-top-content">
+        <!-- Логотип -->
+        <div class="header-logo">
+          <a href="{% url 'home' %}" class="logo-link">
+            <span class="logo-text">Lexicon</span>
+          </a>
+        </div>
+        
     <!-- Поиск -->
-    <form method="get" action="{% url 'search_books' %}" class="d-flex search-form">
-      <input type="text" 
+        <div class="header-search">
+          <form method="get" action="{% url 'search_books' %}" class="search-form">
+            <input 
+              type="text" 
              name="q" 
-             class="form-control form-control-sm" 
-             placeholder="Поиск по названию, автору, жанру, издателю..." 
-             value="{{ request.GET.q|default:'' }}"
-             style="min-width: 250px; max-width: 400px;">
-      <button type="submit" class="btn btn-primary btn-sm">🔍 Поиск</button>
+              class="search-input" 
+              placeholder="Поиск по автору, названию, жанру..." 
+              value="{{ request.GET.q|default:'' }}">
+            <button type="submit" class="search-button">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M19 19L14.65 14.65" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
     </form>
-    <!-- Навигация -->
-    <a href="{% url 'home' %}" class="btn btn-outline-secondary btn-sm">🏠 На главную</a>
-    <a href="{% url 'books_list' %}" class="btn btn-outline-primary btn-sm">📚 Каталог</a>
-    <a href="{% url 'cart_view' %}" class="btn btn-outline-primary btn-sm">🛒 Корзина</a>
-    <a href="{% url 'support_chat' %}" class="btn btn-outline-info btn-sm">💬 Поддержка</a>
+        </div>
+        
+        <!-- Правая часть: избранное, корзина, авторизация -->
+        <div class="header-actions">
           {% if user.is_authenticated %}
-            <a href="{% url 'profile' %}" class="btn btn-outline-primary btn-sm">👤 Профиль</a>
-            {% if user.is_manager or user.is_admin %}
-              <a href="{% url 'manager_dashboard' %}" class="btn btn-outline-secondary btn-sm">📊 Панель менеджера</a>
+            <!-- Избранное -->
+            <a href="{% url 'wishlist_view' %}" class="header-icon-link" title="Избранное">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+              {% if user.is_authenticated %}
+                <span class="icon-badge" id="wishlist-count">
+                  {% if wishlist_count > 0 %}{{ wishlist_count }}{% endif %}
+                </span>
+              {% endif %}
+            </a>
+            
+            <!-- Корзина -->
+            <a href="{% url 'cart_view' %}" class="header-icon-link cart-link" title="Корзина">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9 22C9.55228 22 10 21.5523 10 21C10 20.4477 9.55228 20 9 20C8.44772 20 8 20.4477 8 21C8 21.5523 8.44772 22 9 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M20 22C20.5523 22 21 21.5523 21 21C21 20.4477 20.5523 20 20 20C19.4477 20 19 20.4477 19 21C19 21.5523 19.4477 22 20 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M1 1H5L7.68 14.39C7.77144 14.8504 8.02191 15.264 8.38755 15.5583C8.75318 15.8526 9.2107 16.009 9.68 16H19C19.5304 16 20.0391 15.7893 20.4142 15.4142C20.7893 15.0391 21 14.5304 21 14H9.68L8.68 8H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span class="icon-badge" id="cart-count">
+                {% if cart_total_quantity > 0 %}{{ cart_total_quantity }}{% endif %}
+              </span>
+            </a>
+            
+            <!-- Профиль пользователя -->
+            <div class="user-menu">
+              <a href="{% url 'profile' %}" class="user-link" title="Профиль">
+                <span class="user-name">{{ user.first_name|default:user.email|truncatechars:15 }}</span>
+                {% if user.avatar %}
+                  <img src="{{ user.avatar.url }}" alt="Avatar" class="user-avatar">
+                {% else %}
+                  <div class="user-avatar-placeholder">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </div>
             {% endif %}
-            <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">🚪 Выйти</a>
+              </a>
+            </div>
           {% else %}
-            <a href="{% url 'login' %}" class="btn btn-primary btn-sm">Войти</a>
+            <!-- Для неавторизованных пользователей -->
+            <div class="auth-links">
+              <a href="{% url 'login' %}" class="auth-link">Войти</a>
+              <span class="auth-separator">|</span>
+              <a href="{% url 'register' %}" class="auth-link">Зарегистрироваться</a>
+            </div>
           {% endif %}
+          
+          <!-- Hamburger menu для мобильных -->
+          <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Меню">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M3 12H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 6H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M3 18H21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
+  
+  <!-- Навигационное меню (десктоп) -->
+  <nav class="header-nav desktop-nav">
+    <div class="container-fluid">
+      <ul class="nav-menu">
+        <li class="nav-item">
+          <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="nav-icon">
+              <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Главная</span>
+            {% if request.resolver_match.url_name == 'home' %}<span class="nav-dot"></span>{% endif %}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'books_list' %}" class="nav-link nav-link-catalog {% if request.resolver_match.url_name == 'books_list' %}active{% endif %}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="nav-icon">
+              <path d="M3 3H8C8.53043 3 9.03914 3.21071 9.41421 3.58579C9.78929 3.96086 10 4.46957 10 5V21C10 20.4696 9.78929 19.9609 9.41421 19.5858C9.03914 19.2107 8.53043 19 8 19H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3H21V19H16C15.4696 19 14.9609 19.2107 14.5858 19.5858C14.2107 19.9609 14 20.4696 14 21V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Каталог книг</span>
+            {% if request.resolver_match.url_name == 'books_list' %}<span class="nav-dot"></span>{% endif %}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'stationery_list' %}" class="nav-link nav-link-catalog {% if request.resolver_match.url_name == 'stationery_list' %}active{% endif %}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="nav-icon">
+              <path d="M21 16V8C20.9996 7.64928 20.9071 7.30481 20.7315 7.00116C20.556 6.69751 20.3037 6.44536 20 6.27L13 2.27C12.696 2.09446 12.3511 2.00205 12 2.00205C11.6489 2.00205 11.304 2.09446 11 2.27L4 6.27C3.69626 6.44536 3.44398 6.69751 3.26846 7.00116C3.09294 7.30481 3.00036 7.64928 3 8V16C3.00036 16.3507 3.09294 16.6952 3.26846 16.9988C3.44398 17.3025 3.69626 17.5546 4 17.73L11 21.73C11.304 21.9055 11.6489 21.9979 12 21.9979C12.3511 21.9979 12.696 21.9055 13 21.73L20 17.73C20.3037 17.5546 20.556 17.3025 20.7315 16.9988C20.9071 16.6952 20.9996 16.3507 21 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3.27 6.96L12 12.01L20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M12 22.08V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Каталог канцтоваров</span>
+            {% if request.resolver_match.url_name == 'stationery_list' %}<span class="nav-dot"></span>{% endif %}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a href="{% url 'support_chat' %}" class="nav-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="nav-icon">
+              <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Поддержка</span>
+          </a>
+        </li>
+        {% if user.is_manager or user.is_admin %}
+        <li class="nav-item">
+          <a href="{% url 'manager_dashboard' %}" class="nav-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="nav-icon">
+              <path d="M3 3H10V10H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 3H21V10H14V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3 14H10V21H3V14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 14H21V21H14V14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Панель менеджера</span>
+          </a>
+        </li>
+        {% endif %}
+      </ul>
+    </div>
+  </nav>
+  
+  <!-- Мобильное меню -->
+  <nav class="mobile-nav" id="mobileNav">
+    <button class="mobile-nav-close" id="mobileNavClose" aria-label="Закрыть меню">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+    <div class="mobile-nav-content">
+      <a href="{% url 'home' %}" class="mobile-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 9L12 2L21 9V20C21 20.5304 20.7893 21.0391 20.4142 21.4142C20.0391 21.7893 19.5304 22 19 22H5C4.46957 22 3.96086 21.7893 3.58579 21.4142C3.21071 21.0391 3 20.5304 3 20V9Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 22V12H15V22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Главная</span>
+      </a>
+      <a href="{% url 'books_list' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 19.5C4 18.837 4.26339 18.2011 4.73223 17.7322C5.20107 17.2634 5.83696 17 6.5 17H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M6.5 2H20V22H6.5C5.83696 22 5.20107 21.7366 4.73223 21.2678C4.26339 20.7989 4 20.163 4 19.5V4.5C4 3.83696 4.26339 3.20107 4.73223 2.73223C5.20107 2.26339 5.83696 2 6.5 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Книги</span>
+      </a>
+      <a href="{% url 'stationery_list' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 16V8C20.9996 7.64928 20.9071 7.30481 20.7315 7.00116C20.556 6.69751 20.3037 6.44536 20 6.27L13 2.27C12.696 2.09446 12.3511 2.00205 12 2.00205C11.6489 2.00205 11.304 2.09446 11 2.27L4 6.27C3.69626 6.44536 3.44398 6.69751 3.26846 7.00116C3.09294 7.30481 3.00036 7.64928 3 8V16C3.00036 16.3507 3.09294 16.6952 3.26846 16.9988C3.44398 17.3025 3.69626 17.5546 4 17.73L11 21.73C11.304 21.9055 11.6489 21.9979 12 21.9979C12.3511 21.9979 12.696 21.9055 13 21.73L20 17.73C20.3037 17.5546 20.556 17.3025 20.7315 16.9988C20.9071 16.6952 20.9996 16.3507 21 16Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3.27 6.96L12 12.01L20.73 6.96" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 22.08V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Канцтовары</span>
+      </a>
+      <a href="{% url 'support_chat' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M21 15C21 15.5304 20.7893 16.0391 20.4142 16.4142C20.0391 16.7893 19.5304 17 19 17H7L3 21V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Поддержка</span>
+      </a>
+      {% if user.is_manager or user.is_admin %}
+      <a href="{% url 'manager_dashboard' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3 3H10V10H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 3H21V10H14V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M3 14H10V21H3V14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M14 14H21V21H14V14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Панель менеджера</span>
+      </a>
+      {% endif %}
+      {% if user.is_authenticated %}
+      <a href="{% url 'wishlist_view' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        <span>Избранное</span>
+      </a>
+      <a href="{% url 'cart_view' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 22C9.55228 22 10 21.5523 10 21C10 20.4477 9.55228 20 9 20C8.44772 20 8 20.4477 8 21C8 21.5523 8.44772 22 9 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 22C20.5523 22 21 21.5523 21 21C21 20.4477 20.5523 20 20 20C19.4477 20 19 20.4477 19 21C19 21.5523 19.4477 22 20 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M1 1H5L7.68 14.39C7.77144 14.8504 8.02191 15.264 8.38755 15.5583C8.75318 15.8526 9.2107 16.009 9.68 16H19C19.5304 16 20.0391 15.7893 20.4142 15.4142C20.7893 15.0391 21 14.5304 21 14H9.68L8.68 8H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Корзина</span>
+      </a>
+      <a href="{% url 'profile' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Профиль</span>
+      </a>
+      {% else %}
+      <a href="{% url 'login' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 3H19C19.5304 3 20.0391 3.21071 20.4142 3.58579C20.7893 3.96086 21 4.46957 21 5V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 12H3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Войти</span>
+      </a>
+      <a href="{% url 'register' %}" class="mobile-nav-link">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M16 21V19C16 17.9391 15.5786 16.9217 14.8284 16.1716C14.0783 15.4214 13.0609 15 12 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8.5 11C10.7091 11 12.5 9.20914 12.5 7C12.5 4.79086 10.7091 3 8.5 3C6.29086 3 4.5 4.79086 4.5 7C4.5 9.20914 6.29086 11 8.5 11Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M23 11L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M18 11L23 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Зарегистрироваться</span>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
 </header>
 
 <style>
-  .search-form {
-    margin-right: 10px;
+  /* Цветовая палитра */
+  :root {
+    --lavender-blue: #C6D4FF;
+    --french-violet: #6F2DBD;
+    --amethyst: #A663CC;
+    --dark-liver: #594236;
+    --umber: #6F584B;
   }
-  @media (max-width: 768px) {
-    .search-form {
-      width: 100%;
-      margin-bottom: 10px;
+  
+  .main-header {
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+  
+  .header-top {
+    border-bottom: 1px solid #f0f0f0;
+  }
+  
+  .header-top-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    gap: 2rem;
+  }
+  
+  .header-logo {
+    flex-shrink: 0;
+  }
+  
+  .logo-link {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+  .logo-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--french-violet);
+    letter-spacing: -0.5px;
+  }
+  
+  .header-search {
+    flex: 1;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .search-form {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 3rem 0.75rem 1.25rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: #f9fafb;
+    transition: all 0.2s;
+  }
+  
+  .search-input:focus {
+    outline: none;
+    border-color: var(--french-violet);
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(111, 45, 189, 0.1);
+  }
+  
+  .search-button {
+    position: absolute;
+    right: 0.5rem;
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+  }
+  
+  .search-button:hover {
+    color: var(--french-violet);
+  }
+  
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-shrink: 0;
+  }
+  
+  .header-icon-link {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--dark-liver);
+    text-decoration: none;
+    transition: color 0.2s;
+    width: 40px;
+    height: 40px;
+  }
+  
+  .header-icon-link:hover {
+    color: var(--french-violet);
+  }
+  
+  .header-icon-link svg {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .icon-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--french-violet);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    transform: translate(25%, -25%);
+  }
+  
+  .icon-badge:empty {
+    display: none;
+  }
+  
+  .auth-links {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+  }
+  
+  .auth-link {
+    color: var(--dark-liver);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  
+  .auth-link:hover {
+    color: var(--french-violet);
+  }
+  
+  .auth-separator {
+    color: #d1d5db;
+  }
+  
+  .user-menu {
+    display: flex;
+    align-items: center;
+  }
+  
+  .user-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: var(--dark-liver);
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  
+  .user-link:hover {
+    color: var(--french-violet);
+  }
+  
+  .user-name {
+    font-size: 0.95rem;
+  }
+  
+  .user-avatar,
+  .user-avatar-placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--lavender-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--french-violet);
+  }
+  
+  .user-avatar {
+    border: 2px solid #e5e7eb;
+  }
+  
+  /* Hamburger menu button */
+  .mobile-menu-toggle {
+    display: none;
+    background: var(--lavender-blue);
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--french-violet);
+    transition: all 0.2s;
+  }
+  
+  .mobile-menu-toggle:hover {
+    background: var(--amethyst);
+    color: white;
+  }
+  
+  .mobile-menu-toggle svg {
+    width: 24px;
+    height: 24px;
+  }
+  
+  /* Desktop navigation */
+  .header-nav {
+    background: #ffffff;
+  }
+  
+  .desktop-nav {
+    display: block;
+  }
+  
+  .nav-menu {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    list-style: none;
+    margin: 0;
+    padding: 0.75rem 2rem;
+    overflow-x: auto;
+  }
+  
+  .nav-item {
+    flex-shrink: 0;
+    position: relative;
+  }
+  
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--dark-liver);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    padding: 0.5rem 0.75rem;
+    position: relative;
+    transition: all 0.2s;
+    white-space: nowrap;
+    border-radius: 8px;
+    background: transparent;
+  }
+  
+  .nav-link:hover {
+    color: var(--french-violet);
+    background: transparent;
+  }
+  
+  .nav-link.active {
+    color: var(--french-violet);
+    background: transparent;
+  }
+  
+  .nav-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    transition: transform 0.2s;
+  }
+  
+  .nav-link:hover .nav-icon {
+    transform: scale(1.1);
+  }
+  
+  .nav-dot {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background: var(--french-violet);
+    border-radius: 50%;
+  }
+  
+  .nav-arrow {
+    width: 12px;
+    height: 12px;
+    color: #9ca3af;
+    margin-left: 0.25rem;
+  }
+  
+  /* Мобильное меню */
+  .mobile-nav {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(89, 66, 54, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 2000;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    overflow-y: auto;
+    visibility: hidden;
+  }
+  
+  .mobile-nav.active {
+    transform: translateX(0);
+    visibility: visible;
+  }
+  
+  .mobile-nav-close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: white;
+    transition: all 0.2s;
+    z-index: 10;
+  }
+  
+  .mobile-nav-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
+  }
+  
+  .mobile-nav-close svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .mobile-nav-content {
+    padding: 2rem;
+    padding-top: 5rem;
+  }
+  
+  .mobile-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    color: white;
+    text-decoration: none;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+  
+  .mobile-nav-link:hover,
+  .mobile-nav-link.active {
+    background: var(--lavender-blue);
+    color: var(--french-violet);
+  }
+  
+  .mobile-nav-link svg {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  
+  /* Адаптивность */
+  @media (min-width: 969px) {
+    .mobile-nav {
+      display: none !important;
     }
-    .search-form input {
-      width: 100% !important;
-      max-width: 100% !important;
+  }
+  
+  @media (max-width: 968px) {
+    .desktop-nav {
+      display: none;
+    }
+    
+    .mobile-menu-toggle {
+      display: block;
+    }
+    
+    .mobile-nav {
+      display: block;
+    }
+    
+    .header-top-content {
+      flex-wrap: wrap;
+      padding: 1rem 1.5rem;
+      gap: 1rem;
+    }
+    
+    .header-search {
+      order: 3;
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .header-logo {
+      order: 1;
+    }
+    
+    .header-actions {
+      order: 2;
+      gap: 1rem;
+    }
+    
+    .user-name {
+      display: none;
+    }
+  }
+  
+  @media (max-width: 576px) {
+    .header-top-content {
+      padding: 0.875rem 1rem;
+    }
+    
+    .logo-text {
+      font-size: 1.25rem;
+    }
+    
+    .search-input {
+      padding: 0.625rem 2.5rem 0.625rem 1rem;
+      font-size: 0.9rem;
+    }
+    
+    .header-actions {
+      gap: 0.75rem;
+    }
+    
+    .header-icon-link {
+      width: 36px;
+      height: 36px;
+    }
+    
+    .header-icon-link svg {
+      width: 20px;
+      height: 20px;
+    }
+    
+    .auth-links {
+      font-size: 0.875rem;
+      gap: 0.5rem;
     }
   }
 </style>
 
+<script>
+  // Мобильное меню
+  document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+    const mobileNav = document.getElementById('mobileNav');
+    const mobileNavClose = document.getElementById('mobileNavClose');
+    
+    function openMobileNav() {
+      if (mobileNav) {
+        mobileNav.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Блокируем скролл страницы
+      }
+    }
+    
+    function closeMobileNav() {
+      if (mobileNav) {
+        mobileNav.classList.remove('active');
+        document.body.style.overflow = ''; // Разблокируем скролл
+      }
+    }
+    
+    if (mobileMenuToggle && mobileNav) {
+      mobileMenuToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openMobileNav();
+      });
+    }
+    
+    if (mobileNavClose) {
+      mobileNavClose.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeMobileNav();
+      });
+    }
+    
+    if (mobileNav) {
+      // Закрытие меню при клике на ссылку
+      const mobileNavLinks = mobileNav.querySelectorAll('.mobile-nav-link');
+      mobileNavLinks.forEach(link => {
+        link.addEventListener('click', function() {
+          closeMobileNav();
+        });
+      });
+      
+      // Закрытие меню при клике вне его
+      mobileNav.addEventListener('click', function(e) {
+        if (e.target === mobileNav) {
+          closeMobileNav();
+        }
+      });
+      
+      // Закрытие по Escape
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && mobileNav.classList.contains('active')) {
+          closeMobileNav();
+        }
+      });
+    }
+  });
+  
+  // Обновление счетчика корзины
+  function updateCartCount() {
+    fetch('{% url "cart_view" %}')
+      .then(response => response.text())
+      .then(html => {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        // Здесь можно парсить количество из HTML, но проще использовать отдельный endpoint
+      });
+  }
+  
+  // Обновление счетчика избранного
+  function updateWishlistCount() {
+    {% if user.is_authenticated %}
+    fetch('{% url "wishlist_view" %}')
+      .then(response => response.text())
+      .then(html => {
+        // Аналогично корзине
+      });
+    {% endif %}
+  }
+</script>

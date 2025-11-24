@@ -2,56 +2,151 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lexicon — книжный и арт-магазин</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    :root {
+      --lavender-blue: #C6D4FF;
+      --french-violet: #6F2DBD;
+      --amethyst: #A663CC;
+      --dark-liver: #594236;
+      --umber: #6F584B;
+    }
+    
     body {
-      font-family: "Inter", sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
     }
-    header {
-      background: #ffffff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 1rem 3rem;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-    .nav-buttons a {
-      margin-left: 10px;
-    }
+    
     .hero {
-      background: linear-gradient(120deg, #4e54c8, #8f94fb);
+      background: linear-gradient(135deg, var(--french-violet) 0%, var(--amethyst) 100%);
       color: white;
       text-align: center;
-      padding: 100px 20px;
+      padding: 80px 20px;
       border-radius: 0 0 40px 40px;
+      margin-bottom: 3rem;
     }
+    
     .hero h1 {
-      font-size: 3rem;
-      font-weight: bold;
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
     }
+    
+    .hero .lead {
+      font-size: 1.25rem;
+      opacity: 0.95;
+    }
+    
     .categories {
-      margin-top: 60px;
-      margin-bottom: 40px;
+      margin-top: 2rem;
+      margin-bottom: 3rem;
+      padding: 0 1rem;
     }
+    
     .category-card {
       border: none;
       border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 4px 20px rgba(111, 45, 189, 0.15);
+      transition: all 0.3s ease;
+      height: 100%;
+      background: white;
     }
+    
     .category-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+      transform: translateY(-8px);
+      box-shadow: 0 12px 30px rgba(111, 45, 189, 0.25);
     }
+    
+    .category-card .card-img-top {
+      height: 250px;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    .category-card:hover .card-img-top {
+      transform: scale(1.05);
+    }
+    
+    .category-card .card-body {
+      padding: 1.5rem;
+    }
+    
+    .category-card .card-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--french-violet);
+      margin-bottom: 0.75rem;
+    }
+    
+    .category-card .card-text {
+      color: var(--dark-liver);
+      font-size: 1rem;
+    }
+    
+    .category-card a {
+      text-decoration: none;
+      color: inherit;
+    }
+    
     footer {
-      margin-top: 60px;
-      background: #fff;
+      margin-top: 4rem;
+      background: white;
       text-align: center;
-      padding: 20px;
-      border-top: 1px solid #eee;
+      padding: 2rem 1rem;
+      border-top: 1px solid #e5e7eb;
+      color: var(--dark-liver);
+    }
+    
+    @media (max-width: 768px) {
+      .hero {
+        padding: 60px 20px;
+        border-radius: 0 0 30px 30px;
+      }
+      
+      .hero h1 {
+        font-size: 2rem;
+      }
+      
+      .hero .lead {
+        font-size: 1.1rem;
+      }
+      
+      .categories {
+        margin-top: 1.5rem;
+        padding: 0 0.5rem;
+      }
+      
+      .category-card .card-img-top {
+        height: 200px;
+      }
+      
+      .category-card .card-title {
+        font-size: 1.25rem;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .hero {
+        padding: 40px 15px;
+        border-radius: 0 0 20px 20px;
+      }
+      
+      .hero h1 {
+        font-size: 1.75rem;
+      }
+      
+      .hero .lead {
+        font-size: 1rem;
+      }
+      
+      .category-card .card-body {
+        padding: 1.25rem;
+      }
     }
   </style>
 </head>
@@ -65,11 +160,11 @@
 </section>
 
 <div class="container categories">
-  <div class="row text-center">
+  <div class="row g-4">
 
     <!-- Категория: КНИГИ -->
-    <div class="col-md-6 mb-4">
-      <a href="{% url 'books_list' %}" class="text-decoration-none text-dark">
+    <div class="col-md-6">
+      <a href="{% url 'books_list' %}" class="text-decoration-none">
         <div class="card category-card">
           <img src="https://images.unsplash.com/photo-1512820790803-83ca734da794?w=800" 
                class="card-img-top" alt="Книги">
@@ -82,10 +177,10 @@
     </div>
 
     <!-- Категория: КАНЦТОВАРЫ -->
-    <div class="col-md-6 mb-4">
-      <a href="{% url 'stationery_list' %}" class="text-decoration-none text-dark">
+    <div class="col-md-6">
+      <a href="{% url 'stationery_list' %}" class="text-decoration-none">
         <div class="card category-card">
-          <img src="https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800" 
+          <img src="https://images.unsplash.com/photo-1706360424579-3d4c48d5b86c?w=800&h=600&fit=crop&auto=format&q=80" 
                class="card-img-top" alt="Канцтовары">
           <div class="card-body">
             <h5 class="card-title">Канцтовары</h5>
@@ -99,7 +194,7 @@
 </div>
 
 <footer>
-  <p>© 2025 Lexicon — все права защищены.</p>
+  <p class="mb-0">© 2025 Lexicon — все права защищены.</p>
 </footer>
 
 </body>

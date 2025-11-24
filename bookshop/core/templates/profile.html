@@ -4,17 +4,21 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Профиль — Lexicon</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
+    :root {
+      --lavender-blue: #C6D4FF;
+      --french-violet: #6F2DBD;
+      --amethyst: #A663CC;
+      --dark-liver: #594236;
+      --umber: #6F584B;
+    }
+    
     body {
       background-color: #f8f9fa;
       font-family: "Inter", sans-serif;
-    }
-    header {
-      background: #ffffff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-      padding: 1rem 3rem;
     }
     .profile-card {
       background: #fff;
@@ -27,27 +31,56 @@
       height: 120px;
       border-radius: 50%;
       object-fit: cover;
-      border: 4px solid #6F2DBD;
+      border: 4px solid var(--french-violet);
     }
     .section-title {
-      color: #6F2DBD;
+      color: var(--french-violet);
       font-weight: bold;
       margin-bottom: 1.5rem;
       padding-bottom: 0.5rem;
-      border-bottom: 2px solid #C6D4FF;
+      border-bottom: 2px solid var(--lavender-blue);
     }
     .order-card {
       border: 1px solid #e0e0e0;
       border-radius: 12px;
       padding: 1.5rem;
       margin-bottom: 1rem;
-      transition: box-shadow 0.3s;
+      transition: all 0.3s ease;
     }
     .order-card:hover {
       box-shadow: 0 4px 12px rgba(111, 45, 189, 0.1);
     }
+    .order-card-hidden {
+      display: none;
+    }
+    .order-card-visible {
+      display: block;
+      animation: slideDown 0.3s ease;
+    }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    #toggleOrdersBtn {
+      display: flex;
+      align-items: center;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    #toggleOrdersBtn:hover {
+      opacity: 0.8;
+    }
+    #toggleOrdersIcon.rotated {
+      transform: rotate(180deg);
+    }
     .review-card {
-      border-left: 4px solid #A663CC;
+      border-left: 4px solid var(--amethyst);
       padding: 1rem;
       margin-bottom: 1rem;
       background: #f8f9fa;
@@ -74,7 +107,7 @@
       color: #ffc107;
     }
     .loyalty-card {
-      background: linear-gradient(135deg, #6F2DBD 0%, #A663CC 50%, #C6D4FF 100%);
+      background: linear-gradient(135deg, var(--french-violet) 0%, var(--amethyst) 50%, var(--lavender-blue) 100%);
       border-radius: 20px;
       padding: 2rem;
       color: white;
@@ -136,6 +169,77 @@
       display: inline-block;
       margin-top: 0.5rem;
     }
+    
+    @media (max-width: 768px) {
+      .profile-card {
+        padding: 1.5rem;
+      }
+      
+      .avatar {
+        width: 80px;
+        height: 80px;
+      }
+      
+      .loyalty-card {
+        padding: 1.5rem;
+      }
+      
+      .loyalty-card-number {
+        font-size: 1.2rem;
+      }
+      
+      .loyalty-card-balance {
+        font-size: 2rem;
+      }
+      
+      .order-card {
+        padding: 1rem;
+      }
+      
+      .profile-card .row {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .profile-card .col-auto {
+        margin-top: 1rem;
+        width: 100%;
+      }
+      
+      .profile-card .col-auto {
+        width: 100%;
+      }
+      
+      .profile-card .col-auto .d-flex {
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      
+      .profile-card .col-auto .btn {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 576px) {
+      .container {
+        padding: 0 1rem;
+      }
+      
+      .profile-card {
+        padding: 1rem;
+        border-radius: 16px;
+      }
+      
+      .loyalty-card {
+        padding: 1rem;
+        border-radius: 16px;
+      }
+      
+      .loyalty-card-info {
+        flex-direction: column;
+        gap: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
@@ -180,8 +284,12 @@
           <p class="text-muted mb-0">📱 {{ user.phone }}</p>
         {% endif %}
       </div>
-      <div class="col-auto">
-        <a href="{% url 'edit_profile' %}" class="btn btn-primary">Редактировать профиль</a>
+      <div class="col-auto d-flex gap-2">
+        <a href="{% url 'edit_profile' %}" class="btn btn-primary" style="background: var(--lavender-blue); border-color: var(--lavender-blue); color: var(--french-violet);">Редактировать профиль</a>
+        <form method="post" action="{% url 'logout' %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-outline-danger" style="border-color: #dc3545; color: #dc3545;">Выйти</button>
+        </form>
       </div>
     </div>
   </div>
@@ -233,18 +341,28 @@
     <div class="col-lg-8">
       <!-- История заказов -->
       <div class="profile-card mb-4">
-        <h4 class="section-title">📦 История заказов</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="section-title mb-0">📦 История заказов</h4>
+          {% if orders|length > 1 %}
+            <button class="btn btn-link p-0 text-decoration-none" id="toggleOrdersBtn" onclick="toggleAllOrders()" style="color: var(--french-violet);">
+              <span id="toggleOrdersText">Показать все заказы</span>
+              <svg id="toggleOrdersIcon" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-left: 0.5rem; transform: rotate(0deg); transition: transform 0.3s;">
+                <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          {% endif %}
+        </div>
         {% if orders %}
           {% for order in orders %}
-            <div class="order-card">
+            <div class="order-card {% if not forloop.first %}order-card-hidden{% endif %}">
               <div class="d-flex justify-content-between align-items-start mb-2">
                 <div>
                   <h5 class="fw-bold mb-1">Заказ #{{ order.id }}</h5>
                   <p class="text-muted small mb-0">{{ order.created_at|date:"d.m.Y H:i" }}</p>
                 </div>
                 <div>
-                  <span class="badge badge-status bg-primary">{{ order.get_status_display }}</span>
-                  <span class="badge badge-status bg-success ms-2">{{ order.total_amount }} ₽</span>
+                  <span class="badge badge-status" style="background: var(--french-violet);">{{ order.get_status_display }}</span>
+                  <span class="badge badge-status ms-2" style="background: var(--amethyst);">{{ order.total_amount }} ₽</span>
                 </div>
               </div>
               <div class="mb-2">
@@ -267,7 +385,7 @@
                 <div class="mt-3">
                   {% for reviewable in reviewable_orders %}
                     {% if reviewable.order.id == order.id %}
-                      <a href="{% url 'add_review' order.id reviewable.book.id %}" class="btn btn-sm btn-outline-primary me-2 mb-2">
+                      <a href="{% url 'add_review' order.id reviewable.book.id %}" class="btn btn-sm me-2 mb-2" style="border-color: var(--lavender-blue); color: var(--french-violet);">
                         Оставить отзыв на "{{ reviewable.book.title }}"
                       </a>
                     {% endif %}
@@ -286,9 +404,9 @@
         <h4 class="section-title">⭐ Мои отзывы</h4>
         {% if reviews %}
           {% for review in reviews %}
-            <div class="review-card">
+            <div class="review-card" id="review-card-{{ review.id }}">
               <div class="d-flex justify-content-between align-items-start mb-2">
-                <div>
+                <div class="flex-grow-1">
                   <h6 class="fw-bold mb-1">{{ review.book.title }}</h6>
                   <div class="rating-stars mb-1">
                     {% for i in "12345" %}
@@ -300,7 +418,20 @@
                     {% endfor %}
                   </div>
                 </div>
-                <span class="text-muted small">{{ review.created_at|date:"d.m.Y" }}</span>
+                <div class="d-flex align-items-start gap-2">
+                  <span class="text-muted small">{{ review.created_at|date:"d.m.Y" }}</span>
+                  <form method="post" action="{% url 'delete_review' review.id %}" class="delete-review-form d-inline" id="delete-review-form-{{ review.id }}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-link p-0 text-danger" title="Удалить отзыв" style="font-size: 0.875rem; text-decoration: none;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 6H5H21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M8 6V4C8 3.46957 8.21071 2.96086 8.58579 2.58579C8.96086 2.21071 9.46957 2 10 2H14C14.5304 2 15.0391 2.21071 15.4142 2.58579C15.7893 2.96086 16 3.46957 16 4V6M19 6V20C19 20.5304 18.7893 21.0391 18.4142 21.4142C18.0391 21.7893 17.5304 22 17 22H7C6.46957 22 5.96086 21.7893 5.58579 21.4142C5.21071 21.0391 5 20.5304 5 20V6H19Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M10 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 11V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                      </svg>
+                    </button>
+                  </form>
+                </div>
               </div>
               {% if review.comment %}
                 <p class="mb-0">{{ review.comment }}</p>
@@ -319,14 +450,14 @@
       <div class="profile-card mb-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="section-title mb-0">📍 Сохраненные адреса</h5>
-          <a href="{% url 'add_saved_address' %}" class="btn btn-sm btn-primary">+ Добавить</a>
+          <a href="{% url 'add_saved_address' %}" class="btn btn-sm btn-primary" style="background: var(--lavender-blue); border-color: var(--lavender-blue); color: var(--french-violet);">+ Добавить</a>
         </div>
         {% if saved_addresses %}
           {% for address in saved_addresses %}
             <div class="address-card">
               <div class="d-flex justify-content-between align-items-start">
                 <div>
-                  <h6 class="fw-bold mb-1">{{ address.title }}{% if address.is_default %} <span class="badge bg-success">По умолчанию</span>{% endif %}</h6>
+                  <h6 class="fw-bold mb-1">{{ address.title }}{% if address.is_default %} <span class="badge" style="background: var(--amethyst);">По умолчанию</span>{% endif %}</h6>
                   <p class="text-muted small mb-0">{{ address.city }}, {{ address.address }}{% if address.postal_code %}, {{ address.postal_code }}{% endif %}</p>
                 </div>
                 <form method="post" action="{% url 'delete_saved_address' address.id %}" class="d-inline">
@@ -345,14 +476,14 @@
       <div class="profile-card">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="section-title mb-0">💳 Привязанные карты</h5>
-          <a href="{% url 'add_payment_card' %}" class="btn btn-sm btn-primary">+ Добавить</a>
+          <a href="{% url 'add_payment_card' %}" class="btn btn-sm btn-primary" style="background: var(--lavender-blue); border-color: var(--lavender-blue); color: var(--french-violet);">+ Добавить</a>
         </div>
         {% if payment_cards %}
           {% for card in payment_cards %}
             <div class="card-item">
               <div class="d-flex justify-content-between align-items-start">
                 <div>
-                  <h6 class="fw-bold mb-1">**** **** **** {{ card.card_number_last4 }}{% if card.is_default %} <span class="badge bg-success">По умолчанию</span>{% endif %}</h6>
+                  <h6 class="fw-bold mb-1">**** **** **** {{ card.card_number_last4 }}{% if card.is_default %} <span class="badge" style="background: var(--amethyst);">По умолчанию</span>{% endif %}</h6>
                   <p class="text-muted small mb-0">{{ card.cardholder_name }} • {{ card.expiry_month }}/{{ card.expiry_year }}</p>
                 </div>
                 <form method="post" action="{% url 'delete_payment_card' card.id %}" class="d-inline">
@@ -371,5 +502,97 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function toggleAllOrders() {
+    const hiddenOrders = document.querySelectorAll('.order-card-hidden');
+    const toggleBtn = document.getElementById('toggleOrdersBtn');
+    const toggleText = document.getElementById('toggleOrdersText');
+    const toggleIcon = document.getElementById('toggleOrdersIcon');
+    
+    if (hiddenOrders.length > 0) {
+      // Показываем все заказы
+      hiddenOrders.forEach(order => {
+        order.classList.remove('order-card-hidden');
+        order.classList.add('order-card-visible');
+      });
+      toggleText.textContent = 'Скрыть заказы';
+      toggleIcon.classList.add('rotated');
+    } else {
+      // Скрываем все кроме первого
+      const allOrders = document.querySelectorAll('.order-card');
+      allOrders.forEach((order, index) => {
+        if (index > 0) {
+          order.classList.remove('order-card-visible');
+          order.classList.add('order-card-hidden');
+        }
+      });
+      toggleText.textContent = 'Показать все заказы';
+      toggleIcon.classList.remove('rotated');
+    }
+  }
+  
+  // Удаление отзывов
+  document.addEventListener('DOMContentLoaded', function() {
+    const deleteReviewForms = document.querySelectorAll('.delete-review-form');
+    
+    deleteReviewForms.forEach(form => {
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!confirm('Вы уверены, что хотите удалить этот отзыв?')) {
+          return;
+        }
+        
+        const formData = new FormData(this);
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const reviewCard = this.closest('.review-card');
+        
+        fetch(this.action, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRFToken': csrftoken,
+          },
+          credentials: 'same-origin',
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            // Плавное удаление карточки
+            if (reviewCard) {
+              reviewCard.style.transition = 'opacity 0.3s, transform 0.3s';
+              reviewCard.style.opacity = '0';
+              reviewCard.style.transform = 'translateX(-20px)';
+              setTimeout(() => {
+                reviewCard.remove();
+                
+                // Если отзывов не осталось, показываем сообщение
+                const reviewsSection = document.querySelector('.profile-card');
+                const remainingReviews = reviewsSection.querySelectorAll('.review-card');
+                if (remainingReviews.length === 0) {
+                  const reviewsContainer = reviewsSection.querySelector('.section-title').parentElement;
+                  const emptyMessage = document.createElement('p');
+                  emptyMessage.className = 'text-muted';
+                  emptyMessage.textContent = 'Вы еще не оставляли отзывы.';
+                  reviewsContainer.appendChild(emptyMessage);
+                }
+              }, 300);
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Произошла ошибка при удалении отзыва');
+        });
+      });
+    });
+  });
+</script>
 </body>
 </html>

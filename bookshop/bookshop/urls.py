@@ -34,11 +34,17 @@ from core.views_auth import (
     delete_saved_address,
     add_payment_card,
     delete_payment_card,
+    delete_review,
 )
 from core.views_support import (
     support_chat,
     support_send_message,
     search_faq,
+)
+from core.views_wishlist import (
+    toggle_wishlist,
+    wishlist_view,
+    check_wishlist_status,
 )
 from core.views_manager import (
     manager_dashboard,
@@ -54,6 +60,12 @@ from core.views_manager import (
     manager_reports_export_image,
     manager_audit_log,
     manager_audit_log_details,
+)
+from core.views_admin_panel import (
+    admin_panel_models,
+    admin_panel_model_list,
+    admin_panel_model_edit,
+    admin_panel_model_delete,
 )
 from core.views_admin import (
     admin_export_data,
@@ -99,6 +111,11 @@ urlpatterns = [
     path('support/', support_chat, name='support_chat'),
     path('support/send-message/', support_send_message, name='support_send_message'),
     path('support/search-faq/', search_faq, name='search_faq'),
+    
+    # Избранное
+    path('wishlist/', wishlist_view, name='wishlist_view'),
+    path('wishlist/toggle/<str:product_type>/<int:pk>/', toggle_wishlist, name='toggle_wishlist'),
+    path('wishlist/check/<str:product_type>/<int:pk>/', check_wishlist_status, name='check_wishlist_status'),
 
     # Авторизация
     path('register/', register_view, name='register'),
@@ -111,6 +128,7 @@ urlpatterns = [
     path('profile/address/<int:address_id>/delete/', delete_saved_address, name='delete_saved_address'),
     path('profile/card/add/', add_payment_card, name='add_payment_card'),
     path('profile/card/<int:card_id>/delete/', delete_payment_card, name='delete_payment_card'),
+    path('profile/review/<int:review_id>/delete/', delete_review, name='delete_review'),
     
     # Сброс пароля
     path('password-reset/', 
@@ -154,7 +172,13 @@ urlpatterns = [
     path('manager/audit-log/', manager_audit_log, name='manager_audit_log'),
     path('manager/export-data/', manager_export_data, name='manager_export_data'),
     path('manager/import-data/', manager_import_data, name='manager_import_data'),
-    path('manager/audit-log/', manager_audit_log, name='manager_audit_log'),
+    
+    # Админ-панель для редактирования всех моделей
+    path('admin-panel/', admin_panel_models, name='admin_panel_models'),
+    path('admin-panel/<str:model_name>/', admin_panel_model_list, name='admin_panel_model_list'),
+    path('admin-panel/<str:model_name>/add/', admin_panel_model_edit, name='admin_panel_model_add'),
+    path('admin-panel/<str:model_name>/<int:object_id>/edit/', admin_panel_model_edit, name='admin_panel_model_edit'),
+    path('admin-panel/<str:model_name>/<int:object_id>/delete/', admin_panel_model_delete, name='admin_panel_model_delete'),
 
     # Админка - кастомные маршруты должны быть ПЕРЕД admin.site.urls
     path('admin/export-data/', admin_export_data, name='admin_export_data'),

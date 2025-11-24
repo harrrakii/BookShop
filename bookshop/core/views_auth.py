@@ -4,6 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_POST
+from django.http import JsonResponse
 
 from .models import Order, Review, SavedAddress, PaymentCard, Book, OrderItem, LoyaltyCard, Role
 from .forms import UserProfileForm, ReviewForm, SavedAddressForm, PaymentCardForm
@@ -271,6 +272,32 @@ def delete_payment_card(request, card_id):
     card = get_object_or_404(PaymentCard, pk=card_id, user=request.user)
     card.delete()
     messages.success(request, 'Карта успешно удалена!')
+    return redirect('profile')
+
+
+@login_required
+@require_POST
+def delete_review(request, review_id):
+    """Удаление отзыва пользователя"""
+    review = get_object_or_404(Review, pk=review_id, user=request.user)
+    book_title = review.book.title
+    review.delete()
+    
+    # Логируем удаление
+    log_action(
+        action='delete',
+        user=request.user,
+        request=request,
+        model_name='Review',
+        object_id=review_id,
+        object_repr=f'Отзыв на "{book_title}"',
+        description=f'Удален отзыв на книгу "{book_title}"',
+    )
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'success': True, 'message': 'Отзыв успешно удален'})
+    
+    messages.success(request, 'Отзыв успешно удален!')
     return redirect('profile')
 
 

@@ -1,0 +1,45 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}{% if is_new %}Создание{% else %}Редактирование{% endif %} {{ model_name }}{% endblock %}
+{% block page_title %}{% if is_new %}➕ Создание{% else %}✏️ Редактирование{% endif %} {{ model_name }}{% endblock %}
+{% block page_description %}{% if is_new %}Создание новой записи{% else %}Редактирование записи #{{ object.id }}{% endif %}{% endblock %}
+
+{% block content %}
+  <div class="data-card">
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <div class="row g-3">
+        {% for field in form %}
+        <div class="col-md-6">
+          <label for="{{ field.id_for_label }}" class="form-label">
+            {{ field.label }}
+            {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+          </label>
+          {{ field }}
+          {% if field.help_text %}
+          <small class="form-text text-muted">{{ field.help_text }}</small>
+          {% endif %}
+          {% if field.errors %}
+          <div class="text-danger small">
+            {% for error in field.errors %}
+            <div>{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        <button type="submit" class="btn btn-manager btn-manager-primary">
+          <i class="bi bi-check-circle"></i> {% if is_new %}Создать{% else %}Сохранить{% endif %}
+        </button>
+        <a href="{% url 'admin_panel_model_list' model_key %}" class="btn btn-manager btn-manager-secondary">
+          <i class="bi bi-x-circle"></i> Отмена
+        </a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+

@@ -378,7 +378,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h3>📊 Панель менеджера</h3>
+        <h3>📊 {% if request.user.is_admin %}Панель администратора{% else %}Панель менеджера{% endif %}</h3>
         <p>Lexicon Bookshop</p>
       </div>
       
@@ -396,6 +396,15 @@
               <span>Заказы</span>
             </a>
           </li>
+          
+          {% if request.user.is_admin %}
+          <!-- Только для админа -->
+          <li class="sidebar-menu-item">
+            <a href="{% url 'admin_panel_models' %}" class="sidebar-menu-link {% if 'admin_panel' in request.resolver_match.url_name %}active{% endif %}">
+              <i class="bi bi-database"></i>
+              <span>Управление данными</span>
+            </a>
+          </li>
           <li class="sidebar-menu-item">
             <a href="{% url 'manager_products' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_products' %}active{% endif %}">
               <i class="bi bi-box-seam"></i>
@@ -403,21 +412,9 @@
             </a>
           </li>
           <li class="sidebar-menu-item">
-            <a href="{% url 'manager_statistics' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_statistics' %}active{% endif %}">
-              <i class="bi bi-graph-up"></i>
-              <span>Статистика</span>
-            </a>
-          </li>
-          <li class="sidebar-menu-item">
             <a href="{% url 'manager_users' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_users' %}active{% endif %}">
               <i class="bi bi-people"></i>
               <span>Пользователи</span>
-            </a>
-          </li>
-          <li class="sidebar-menu-item">
-            <a href="{% url 'manager_reports' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_reports' %}active{% endif %}">
-              <i class="bi bi-file-earmark-bar-graph"></i>
-              <span>Отчеты</span>
             </a>
           </li>
           <li class="sidebar-menu-item">
@@ -438,12 +435,31 @@
               <span>Загрузить данные</span>
             </a>
           </li>
+          {% endif %}
+          
+          <!-- Для всех (админ и менеджер) -->
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_statistics' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_statistics' %}active{% endif %}">
+              <i class="bi bi-graph-up"></i>
+              <span>Статистика</span>
+            </a>
+          </li>
+          <li class="sidebar-menu-item">
+            <a href="{% url 'manager_reports' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_reports' %}active{% endif %}">
+              <i class="bi bi-file-earmark-bar-graph"></i>
+              <span>Отчеты</span>
+            </a>
+          </li>
+          
+          {% if request.user.is_admin %}
           <li class="sidebar-menu-item">
             <a href="{% url 'admin:index' %}" class="sidebar-menu-link" target="_blank">
               <i class="bi bi-gear"></i>
               <span>Django Admin</span>
             </a>
           </li>
+          {% endif %}
+          
           <li class="sidebar-menu-item">
             <a href="{% url 'home' %}" class="sidebar-menu-link">
               <i class="bi bi-house"></i>

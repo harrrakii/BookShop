@@ -22,6 +22,7 @@ from .models import (
     Stationery,
     SupportMessage,
     User,
+    Wishlist,
 )
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 from .audit import log_change
@@ -255,6 +256,22 @@ class SupportMessageAdmin(admin.ModelAdmin):
                 return format_html('<a href="{}" target="_blank">📎 {}</a>', obj.attachment.url, obj.attachment.name)
         return "Нет файла"
     attachment_preview.short_description = "Превью файла"
+
+
+@admin.register(Wishlist)
+class WishlistAdmin(admin.ModelAdmin):
+    list_display = ("user", "get_product_name", "get_product_type", "created_at")
+    list_filter = ("created_at",)
+    search_fields = ("user__email", "user__username", "book__title", "stationery__name")
+    readonly_fields = ("created_at",)
+    
+    def get_product_name(self, obj):
+        return obj.product.title if obj.book else obj.product.name
+    get_product_name.short_description = "Товар"
+    
+    def get_product_type(self, obj):
+        return "Книга" if obj.book else "Канцтовар"
+    get_product_type.short_description = "Тип"
 
 
 @admin.register(AuditLog)

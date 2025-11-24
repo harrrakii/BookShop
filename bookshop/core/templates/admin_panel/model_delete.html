@@ -1,0 +1,94 @@
+{% extends 'manager/base.html' %}
+
+{% block title %}Удаление {{ model_name }}{% endblock %}
+{% block page_title %}🗑️ Удаление {{ model_name }}{% endblock %}
+{% block page_description %}Подтверждение удаления записи{% endblock %}
+
+{% block content %}
+  <div class="data-card">
+    {% if has_dependencies %}
+    <div class="alert alert-danger">
+      <h5><i class="bi bi-exclamation-triangle-fill"></i> Внимание! Обнаружены связанные записи</h5>
+      <p>Невозможно удалить эту запись, так как она используется в других таблицах:</p>
+      
+      <div class="mt-3">
+        {% for dep_name, dep_info in dependencies.items %}
+        <div class="mb-3 p-3 bg-light rounded">
+          <h6 class="mb-2">
+            <strong>{{ dep_info.model_verbose }}</strong> 
+            <span class="badge bg-danger">{{ dep_info.count }} записей</span>
+          </h6>
+          <p class="mb-2 text-muted small">
+            {% if dep_info.type == 'ReverseForeignKey' %}
+              Связано через поле: <code>{{ dep_info.field_name }}</code> в таблице <code>{{ dep_info.model }}</code>
+            {% elif dep_info.type == 'ManyToMany' %}
+              Связано через ManyToMany: <code>{{ dep_info.field_name }}</code>
+            {% else %}
+              Связано через: <code>{{ dep_name }}</code>
+            {% endif %}
+          </p>
+          {% if dep_info.objects %}
+          <div class="small">
+            <strong>Примеры связанных записей:</strong>
+            <ul class="mb-0 mt-2">
+              {% for related_obj in dep_info.objects %}
+              <li>{{ related_obj }}</li>
+              {% endfor %}
+              {% if dep_info.total > 10 %}
+              <li class="text-muted">... и еще {{ dep_info.total|add:"-10" }} записей</li>
+              {% endif %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      
+      <div class="mt-3">
+        <p class="mb-2"><strong>Варианты действий:</strong></p>
+        <ul>
+          <li>Удалите или измените связанные записи вручную</li>
+          <li>Используйте принудительное удаление (будет удалено/изменено {{ dependencies|length }} связанных записей)</li>
+        </ul>
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning">
+      <h5><i class="bi bi-exclamation-triangle"></i> Внимание!</h5>
+      <p>Вы собираетесь удалить запись из таблицы <strong>{{ model_name }}</strong>. Это действие нельзя отменить.</p>
+    </div>
+    {% endif %}
+
+    <div class="mb-4">
+      <h5>Информация о записи:</h5>
+      <div class="bg-light p-3 rounded">
+        <p class="mb-0"><strong>ID:</strong> #{{ object.id }}</p>
+        <p class="mb-0"><strong>Представление:</strong> {{ object }}</p>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      {% if has_dependencies %}
+      <div class="mb-3">
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox" name="force_delete" value="true" id="forceDelete">
+          <label class="form-check-label" for="forceDelete">
+            <strong>Принудительное удаление</strong> (удалит/изменит связанные записи)
+          </label>
+        </div>
+      </div>
+      {% endif %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-manager" style="background: #fee2e2; color: #991b1b;" 
+                {% if has_dependencies %}onclick="return confirm('Вы уверены? Это действие удалит/изменит связанные записи!');"{% else %}onclick="return confirm('Вы уверены, что хотите удалить эту запись?');"{% endif %}>
+          <i class="bi bi-trash"></i> {% if has_dependencies %}Принудительно удалить{% else %}Да, удалить{% endif %}
+        </button>
+        <a href="{% url 'admin_panel_model_list' model_key %}" class="btn btn-manager btn-manager-secondary">
+          <i class="bi bi-x-circle"></i> Отмена
+        </a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+

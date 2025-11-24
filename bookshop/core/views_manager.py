@@ -36,6 +36,20 @@ def manager_required(user):
     return user.is_manager_method()
 
 
+def admin_required(user):
+    """Проверка, что пользователь является админом"""
+    if not user.is_authenticated:
+        return False
+    return user.is_admin_method()
+
+
+def manager_only_required(user):
+    """Проверка, что пользователь является только менеджером (не админом)"""
+    if not user.is_authenticated:
+        return False
+    return user.is_manager_method() and not user.is_admin_method()
+
+
 @login_required
 @user_passes_test(manager_required, login_url='/login/')
 def manager_dashboard(request):
@@ -214,7 +228,7 @@ def manager_order_detail(request, order_id):
 
 
 @login_required
-@user_passes_test(manager_required, login_url='/login/')
+@user_passes_test(admin_required, login_url='/login/')
 def manager_products(request):
     """Управление товарами"""
     product_type = request.GET.get('type', 'books')
@@ -292,7 +306,7 @@ def manager_statistics(request):
 
 
 @login_required
-@user_passes_test(manager_required, login_url='/login/')
+@user_passes_test(admin_required, login_url='/login/')
 def manager_users(request):
     """Управление пользователями"""
     search_query = request.GET.get('q', '')
@@ -323,7 +337,7 @@ def manager_users(request):
 
 
 @login_required
-@user_passes_test(manager_required, login_url='/login/')
+@user_passes_test(admin_required, login_url='/login/')
 def manager_export_data(request):
     """Экспорт всех данных в JSON"""
     try:
@@ -346,7 +360,7 @@ def manager_export_data(request):
 
 
 @login_required
-@user_passes_test(manager_required, login_url='/login/')
+@user_passes_test(admin_required, login_url='/login/')
 @require_http_methods(["GET", "POST"])
 def manager_import_data(request):
     """Импорт данных из JSON"""
@@ -629,9 +643,8 @@ def manager_reports_export_image(request):
     
     return response
 
-
 @login_required
-@user_passes_test(manager_required, login_url='/login/')
+@user_passes_test(admin_required, login_url='/login/')
 def manager_audit_log(request):
     """Журнал аудита - отслеживание изменений"""
     from .models import AuditLog
@@ -726,91 +739,7 @@ def manager_audit_log(request):
 
 
 @login_required
-@user_passes_test(manager_required, login_url='/login/')
-def manager_audit_log(request):
-    """Журнал аудита - отслеживание изменений"""
-    from .models import AuditLog
-    
-    # Фильтры
-    model_filter = request.GET.get('model', '')
-    action_filter = request.GET.get('action', '')
-    user_filter = request.GET.get('user', '')
-    date_from = request.GET.get('date_from', '')
-    date_to = request.GET.get('date_to', '')
-    search_query = request.GET.get('q', '')
-    
-    # Базовый queryset
-    audit_logs = AuditLog.objects.select_related('user').all()
-    
-    # Применяем фильтры
-    if model_filter:
-        audit_logs = audit_logs.filter(model_name__icontains=model_filter)
-    
-    if action_filter:
-        audit_logs = audit_logs.filter(action_type=action_filter)
-    
-    if user_filter:
-        try:
-            user_id = int(user_filter)
-            audit_logs = audit_logs.filter(user_id=user_id)
-        except ValueError:
-            pass
-    
-    if date_from:
-        try:
-            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
-            audit_logs = audit_logs.filter(created_at__gte=date_from_obj)
-        except ValueError:
-            pass
-    
-    if date_to:
-        try:
-            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
-            date_to_obj = date_to_obj + timedelta(days=1)
-            audit_logs = audit_logs.filter(created_at__lt=date_to_obj)
-        except ValueError:
-            pass
-    
-    if search_query:
-        audit_logs = audit_logs.filter(
-            Q(object_repr__icontains=search_query) |
-            Q(model_name__icontains=search_query) |
-            Q(user__email__icontains=search_query) |
-            Q(user__username__icontains=search_query)
-        )
-    
-    # Если фильтры не заданы, показываем последние 100 записей
-    if not any([model_filter, action_filter, user_filter, date_from, date_to, search_query]):
-        audit_logs = audit_logs[:100]
-    else:
-        audit_logs = audit_logs[:500]  # При фильтрах показываем больше
-    
-    # Получаем уникальные модели для фильтра
-    models_list = AuditLog.objects.values_list('model_name', flat=True).distinct().order_by('model_name')
-    
-    # Получаем пользователей для фильтра
-    users_list = User.objects.filter(
-        id__in=AuditLog.objects.values_list('user_id', flat=True).distinct()
-    ).order_by('email')
-    
-    context = {
-        'audit_logs': audit_logs,
-        'models_list': models_list,
-        'users_list': users_list,
-        'model_filter': model_filter,
-        'action_filter': action_filter,
-        'user_filter': user_filter,
-        'date_from': date_from,
-        'date_to': date_to,
-        'search_query': search_query,
-        'action_choices': AuditLog.ACTION_TYPES,
-    }
-    
-    return render(request, 'manager/audit_log.html', context)
-
-
-@login_required
-@user_passes_test(manager_required, login_url='/login/')
+@user_passes_test(admin_required, login_url='/login/')
 def manager_audit_log_details(request, log_id):
     """Детали записи аудита (AJAX)"""
     from .models import AuditLog
