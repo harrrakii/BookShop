@@ -15,12 +15,20 @@ from .models import (
     Product,
     Author,
     Genre,
+    Role,
+    User,
+    DeliveryOption,
+    PickupPoint,
     Order,
     OrderItem,
     Review,
     SavedAddress,
     PaymentCard,
     LoyaltyCard,
+    Wishlist,
+    FAQ,
+    SupportMessage,
+    AuditLog,
 )
 from django.db.models import Count
 
@@ -34,6 +42,20 @@ from .serializers import (
     ProductSerializer,
     AuthorSerializer,
     GenreSerializer,
+    RoleSerializer,
+    UserSerializer,
+    DeliveryOptionSerializer,
+    PickupPointSerializer,
+    OrderSerializer,
+    OrderItemSerializer,
+    ReviewSerializer,
+    SavedAddressSerializer,
+    PaymentCardSerializer,
+    LoyaltyCardSerializer,
+    WishlistSerializer,
+    FAQSerializer,
+    SupportMessageSerializer,
+    AuditLogSerializer,
 )
 
 
@@ -72,6 +94,76 @@ class AuthorViewSet(viewsets.ModelViewSet):
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class DeliveryOptionViewSet(viewsets.ModelViewSet):
+    queryset = DeliveryOption.objects.all()
+    serializer_class = DeliveryOptionSerializer
+
+
+class PickupPointViewSet(viewsets.ModelViewSet):
+    queryset = PickupPoint.objects.all()
+    serializer_class = PickupPointSerializer
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    queryset = OrderItem.objects.all()
+    serializer_class = OrderItemSerializer
+
+
+class ReviewViewSet(viewsets.ModelViewSet):
+    queryset = Review.objects.all()
+    serializer_class = ReviewSerializer
+
+
+class SavedAddressViewSet(viewsets.ModelViewSet):
+    queryset = SavedAddress.objects.all()
+    serializer_class = SavedAddressSerializer
+
+
+class PaymentCardViewSet(viewsets.ModelViewSet):
+    queryset = PaymentCard.objects.all()
+    serializer_class = PaymentCardSerializer
+
+
+class LoyaltyCardViewSet(viewsets.ModelViewSet):
+    queryset = LoyaltyCard.objects.all()
+    serializer_class = LoyaltyCardSerializer
+
+
+class WishlistViewSet(viewsets.ModelViewSet):
+    queryset = Wishlist.objects.all()
+    serializer_class = WishlistSerializer
+
+
+class FAQViewSet(viewsets.ModelViewSet):
+    queryset = FAQ.objects.all()
+    serializer_class = FAQSerializer
+
+
+class SupportMessageViewSet(viewsets.ModelViewSet):
+    queryset = SupportMessage.objects.all()
+    serializer_class = SupportMessageSerializer
+
+
+class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):  # Только чтение для логов
+    queryset = AuditLog.objects.all()
+    serializer_class = AuditLogSerializer
 
 
 # ---------- Обычные HTML-views ----------
