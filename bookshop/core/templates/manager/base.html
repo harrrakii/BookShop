@@ -378,7 +378,7 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h3>📊 {% if request.user.is_admin %}Панель администратора{% else %}Панель менеджера{% endif %}</h3>
+        <h3>{% if request.user.is_admin %}Панель администратора{% else %}Панель менеджера{% endif %}</h3>
         <p>Lexicon Bookshop</p>
       </div>
       
@@ -445,7 +445,7 @@
             </a>
           </li>
           <li class="sidebar-menu-item">
-            <a href="{% url 'manager_reports' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_reports' %}active{% endif %}">
+            <a href="{% url 'manager_reports' %}" class="sidebar-menu-link {% if request.resolver_match.url_name == 'manager_reports' or request.resolver_match.url_name == 'manager_reports_customers' %}active{% endif %}">
               <i class="bi bi-file-earmark-bar-graph"></i>
               <span>Отчеты</span>
             </a>

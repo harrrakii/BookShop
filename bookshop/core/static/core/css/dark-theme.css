@@ -1,0 +1,115 @@
+/* Темная тема для клиентских страниц */
+
+/* CSS переменные для темной темы */
+:root {
+  /* Светлая тема (по умолчанию) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-tertiary: #f9fafb;
+  --text-primary: #2d1b3d;
+  --text-secondary: #6c757d;
+  --border-color: #e5e7eb;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --shadow-hover: rgba(0, 0, 0, 0.15);
+}
+
+/* Темная тема */
+[data-theme="dark"] {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-tertiary: #0f3460;
+  --text-primary: #e8e8e8;
+  --text-secondary: #b0b0b0;
+  --border-color: #2d3748;
+  --shadow: rgba(0, 0, 0, 0.3);
+  --shadow-hover: rgba(0, 0, 0, 0.5);
+}
+
+/* Применение темной темы к body */
+[data-theme="dark"] body {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Карточки и контейнеры */
+[data-theme="dark"] .card,
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .filter-section,
+[data-theme="dark"] .order-card,
+[data-theme="dark"] .review-card {
+  background: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Текст */
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] p,
+[data-theme="dark"] .text-muted {
+  color: var(--text-secondary) !important;
+}
+
+/* Формы */
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+  background: var(--bg-primary) !important;
+  border-color: var(--french-violet) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Кнопки */
+[data-theme="dark"] .btn-primary {
+  background: var(--lavender-blue) !important;
+  border-color: var(--lavender-blue) !important;
+  color: var(--french-violet) !important;
+}
+
+[data-theme="dark"] .btn-primary:hover {
+  background: var(--french-violet) !important;
+  border-color: var(--french-violet) !important;
+  color: white !important;
+}
+
+/* Ссылки */
+[data-theme="dark"] a {
+  color: var(--lavender-blue) !important;
+}
+
+[data-theme="dark"] a:hover {
+  color: var(--french-violet) !important;
+}
+
+/* Footer */
+[data-theme="dark"] footer {
+  background: var(--bg-primary) !important;
+  color: var(--text-secondary) !important;
+  border-top-color: var(--border-color) !important;
+}
+
+/* Тени */
+[data-theme="dark"] .card,
+[data-theme="dark"] .profile-card,
+[data-theme="dark"] .filter-section {
+  box-shadow: 0 2px 10px var(--shadow) !important;
+}
+
+[data-theme="dark"] .card:hover,
+[data-theme="dark"] .category-card:hover {
+  box-shadow: 0 8px 20px var(--shadow-hover) !important;
+}
+

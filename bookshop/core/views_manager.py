@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from django.db.models import Count, Sum, Avg, Q, F
+from django.db.models import Count, Sum, Avg, Q, F, Max, Min
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.http import HttpResponse
@@ -257,7 +257,7 @@ def manager_products(request):
 @login_required
 @user_passes_test(manager_required, login_url='/login/')
 def manager_statistics(request):
-    """Детальная статистика"""
+    """Статистика с данными по заказам и клиентам"""
     # Выбор периода
     period = request.GET.get('period', 'month')  # week, month, year
     today = timezone.now().date()
@@ -269,10 +269,11 @@ def manager_statistics(request):
     else:  # month
         start_date = today - timedelta(days=30)
     
+    # Базовый queryset заказов за период
+    orders = Order.objects.filter(created_at__date__gte=start_date)
+    
     # Статистика продаж по дням
-    daily_sales = Order.objects.filter(
-        created_at__date__gte=start_date
-    ).annotate(
+    daily_sales = orders.annotate(
         day=TruncDate('created_at')
     ).values('day').annotate(
         revenue=Sum('total_amount'),
@@ -280,19 +281,44 @@ def manager_statistics(request):
     ).order_by('day')
     
     # Статистика по статусам заказов
-    status_stats = Order.objects.filter(
-        created_at__date__gte=start_date
-    ).values('status').annotate(
+    status_stats = orders.values('status').annotate(
         count=Count('id'),
         revenue=Sum('total_amount')
     ).order_by('status')
     
     # Статистика по способам доставки
-    delivery_stats = Order.objects.filter(
-        created_at__date__gte=start_date
-    ).values('fulfillment_type').annotate(
+    delivery_stats = orders.values('fulfillment_type').annotate(
         count=Count('id')
     ).order_by('fulfillment_type')
+    
+    # Статистика по клиентам
+    total_customers = orders.filter(user__isnull=False).values('user').distinct().count()
+    total_guest_customers = orders.filter(user__isnull=True).values('email').distinct().count()
+    total_revenue = orders.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
+    avg_order_value = orders.aggregate(Avg('total_amount'))['total_amount__avg'] or Decimal('0')
+    
+    # Новые клиенты (первый заказ в периоде)
+    new_customers = orders.filter(user__isnull=False).values('user').annotate(
+        first_order=Min('created_at')
+    ).filter(first_order__gte=start_date).count()
+    
+    # Топ клиентов (авторизованные)
+    customer_stats = orders.filter(user__isnull=False).select_related('user').values(
+        'user__id', 'user__email', 'user__first_name', 'user__last_name'
+    ).annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')[:20]
+    
+    # Топ гостевых клиентов
+    guest_stats = orders.filter(user__isnull=True).values('email').annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')[:10]
     
     context = {
         'period': period,
@@ -301,6 +327,22 @@ def manager_statistics(request):
         'daily_sales': daily_sales,
         'status_stats': status_stats,
         'delivery_stats': delivery_stats,
+        # Данные по клиентам
+        'total_customers': total_customers,
+        'total_guest_customers': total_guest_customers,
+        'total_revenue': total_revenue,
+        'avg_order_value': avg_order_value,
+        'new_customers': new_customers,
+        'customer_stats': customer_stats,
+        'guest_stats': guest_stats,
+        # Данные по клиентам
+        'total_customers': total_customers,
+        'total_guest_customers': total_guest_customers,
+        'total_revenue': total_revenue,
+        'avg_order_value': avg_order_value,
+        'new_customers': new_customers,
+        'customer_stats': customer_stats,
+        'guest_stats': guest_stats,
     }
     return render(request, 'manager/statistics.html', context)
 
@@ -375,7 +417,7 @@ def manager_import_data(request):
     
     try:
         json_data = json_file.read().decode('utf-8')
-        import_data_from_json(json_data)
+        result = import_data_from_json(json_data)
         
         # Логируем импорт данных
         log_action(
@@ -385,9 +427,20 @@ def manager_import_data(request):
             description=f'Импорт данных из файла: {json_file.name}',
         )
         
-        messages.success(request, "Данные успешно импортированы")
-    except Exception as e:
+        # Формируем сообщение о результате
+        total_imported = sum(result.get('imported', {}).values())
+        if result.get('errors'):
+            messages.warning(
+                request, 
+                f"Импорт завершен с предупреждениями. Импортировано записей: {total_imported}. "
+                f"Ошибок: {len(result['errors'])}"
+            )
+        else:
+            messages.success(request, f"Данные успешно импортированы. Импортировано записей: {total_imported}")
+    except ValueError as e:
         messages.error(request, f"Ошибка при импорте данных: {str(e)}")
+    except Exception as e:
+        messages.error(request, f"Неожиданная ошибка при импорте данных: {str(e)}")
     
     return redirect('manager_import_data')
 
@@ -395,8 +448,8 @@ def manager_import_data(request):
 @login_required
 @user_passes_test(manager_required, login_url='/login/')
 def manager_reports(request):
-    """Страница с отчетами"""
-    # Получаем параметры фильтров
+    """Страница с отчетами (объединенная - заказы и клиенты)"""
+    # Получаем параметры фильтров для заказов
     date_from = request.GET.get('date_from', '')
     date_to = request.GET.get('date_to', '')
     status = request.GET.get('status', '')
@@ -433,7 +486,7 @@ def manager_reports(request):
         month_ago = timezone.now() - timedelta(days=30)
         orders = orders.filter(created_at__gte=month_ago)
     
-    # Статистика
+    # Статистика по заказам
     total_orders = orders.count()
     total_revenue = orders.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
     avg_order_value = orders.aggregate(Avg('total_amount'))['total_amount__avg'] or Decimal('0')
@@ -460,7 +513,65 @@ def manager_reports(request):
         revenue=Sum('total_amount')
     ).order_by('day')
     
+    # Данные по клиентам (для второй вкладки)
+    orders_for_customers = Order.objects.select_related('user').all()
+    
+    # Применяем те же фильтры по дате
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            orders_for_customers = orders_for_customers.filter(created_at__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_obj = date_to_obj + timedelta(days=1)
+            orders_for_customers = orders_for_customers.filter(created_at__lt=date_to_obj)
+        except ValueError:
+            pass
+    
+    if not date_from and not date_to:
+        month_ago = timezone.now() - timedelta(days=30)
+        orders_for_customers = orders_for_customers.filter(created_at__gte=month_ago)
+    
+    # Статистика по клиентам
+    customer_stats = orders_for_customers.filter(user__isnull=False).values(
+        'user__id', 'user__email', 'user__first_name', 'user__last_name'
+    ).annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')[:20]
+    
+    guest_stats = orders_for_customers.filter(user__isnull=True).values('email').annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')[:10]
+    
+    total_customers = orders_for_customers.filter(user__isnull=False).values('user').distinct().count()
+    total_guest_customers = orders_for_customers.filter(user__isnull=True).values('email').distinct().count()
+    
+    if date_from or date_to:
+        start_date_obj = datetime.strptime(date_from, '%Y-%m-%d').date() if date_from else (timezone.now() - timedelta(days=30)).date()
+        new_customers = orders_for_customers.filter(user__isnull=False).values('user').annotate(
+            first_order=Min('created_at')
+        ).filter(first_order__date__gte=start_date_obj).count()
+    else:
+        month_ago = timezone.now() - timedelta(days=30)
+        new_customers = orders_for_customers.filter(
+            user__isnull=False,
+            created_at__gte=month_ago
+        ).values('user').annotate(
+            first_order=Min('created_at')
+        ).filter(first_order__gte=month_ago).count()
+    
     context = {
+        # Данные по заказам
         'orders': orders[:100],  # Ограничиваем для отображения
         'total_orders': total_orders,
         'total_revenue': total_revenue,
@@ -475,6 +586,12 @@ def manager_reports(request):
         'fulfillment_type': fulfillment_type,
         'status_choices': Order.Status.choices,
         'fulfillment_choices': Order.FulfillmentType.choices,
+        # Данные по клиентам
+        'customer_stats': customer_stats,
+        'guest_stats': guest_stats,
+        'total_customers': total_customers,
+        'total_guest_customers': total_guest_customers,
+        'new_customers': new_customers,
     }
     
     return render(request, 'manager/reports.html', context)
@@ -642,6 +759,249 @@ def manager_reports_export_image(request):
     response['Content-Disposition'] = f'attachment; filename="lexicon_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png"'
     
     return response
+
+
+@login_required
+@user_passes_test(manager_required, login_url='/login/')
+def manager_reports_customers(request):
+    """Отчет по клиентам (покупателям)"""
+    # Получаем параметры фильтров
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    # Базовый queryset заказов
+    orders = Order.objects.select_related('user').all()
+    
+    # Применяем фильтры по дате
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            orders = orders.filter(created_at__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_obj = date_to_obj + timedelta(days=1)
+            orders = orders.filter(created_at__lt=date_to_obj)
+        except ValueError:
+            pass
+    
+    # Если фильтры не заданы, показываем данные за последний месяц
+    if not date_from and not date_to:
+        month_ago = timezone.now() - timedelta(days=30)
+        orders = orders.filter(created_at__gte=month_ago)
+    
+    # Статистика по авторизованным клиентам
+    customer_stats = orders.filter(user__isnull=False).values(
+        'user__id', 'user__email', 'user__first_name', 'user__last_name'
+    ).annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')[:20]
+    
+    # Статистика по неавторизованным клиентам (по email)
+    guest_stats = orders.filter(user__isnull=True).values('email').annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')[:10]
+    
+    # Общая статистика
+    total_customers = orders.filter(user__isnull=False).values('user').distinct().count()
+    total_guest_customers = orders.filter(user__isnull=True).values('email').distinct().count()
+    total_revenue = orders.aggregate(Sum('total_amount'))['total_amount__sum'] or Decimal('0')
+    
+    # Статистика по новым клиентам (первый заказ в периоде)
+    if date_from or date_to:
+        # Если есть фильтр по дате, считаем новых клиентов в этом периоде
+        new_customers = orders.filter(user__isnull=False).values('user').annotate(
+            first_order=Min('created_at')
+        ).filter(first_order__gte=orders.aggregate(Min('created_at'))['created_at__min']).count()
+    else:
+        # За последний месяц
+        month_ago = timezone.now() - timedelta(days=30)
+        new_customers = orders.filter(
+            user__isnull=False,
+            created_at__gte=month_ago
+        ).values('user').annotate(
+            first_order=Min('created_at')
+        ).filter(first_order__gte=month_ago).count()
+    
+    # Статистика по среднему чеку
+    avg_order_value = orders.aggregate(Avg('total_amount'))['total_amount__avg'] or Decimal('0')
+    
+    context = {
+        'customer_stats': customer_stats,
+        'guest_stats': guest_stats,
+        'total_customers': total_customers,
+        'total_guest_customers': total_guest_customers,
+        'total_revenue': total_revenue,
+        'new_customers': new_customers,
+        'avg_order_value': avg_order_value,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'manager/reports_customers.html', context)
+
+
+@login_required
+@user_passes_test(manager_required, login_url='/login/')
+def manager_reports_customers_export_csv(request):
+    """Экспорт отчета по клиентам в CSV"""
+    log_action(
+        action='download',
+        user=request.user,
+        request=request,
+        description='Скачивание отчета по клиентам в формате CSV',
+    )
+    
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    orders = Order.objects.select_related('user').all()
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            orders = orders.filter(created_at__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_obj = date_to_obj + timedelta(days=1)
+            orders = orders.filter(created_at__lt=date_to_obj)
+        except ValueError:
+            pass
+    
+    if not date_from and not date_to:
+        month_ago = timezone.now() - timedelta(days=30)
+        orders = orders.filter(created_at__gte=month_ago)
+    
+    customer_stats = orders.filter(user__isnull=False).values(
+        'user__id', 'user__email', 'user__first_name', 'user__last_name'
+    ).annotate(
+        total_orders=Count('id'),
+        total_spent=Sum('total_amount'),
+        avg_order_value=Avg('total_amount'),
+        last_order_date=Max('created_at')
+    ).order_by('-total_spent')
+    
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="lexicon_customers_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'ID клиента', 'Email', 'Имя', 'Фамилия', 'Количество заказов',
+        'Общая сумма', 'Средний чек', 'Последний заказ'
+    ])
+    
+    for stat in customer_stats:
+        writer.writerow([
+            stat['user__id'],
+            stat['user__email'],
+            stat['user__first_name'] or '',
+            stat['user__last_name'] or '',
+            stat['total_orders'],
+            str(stat['total_spent']),
+            str(stat['avg_order_value']),
+            stat['last_order_date'].strftime('%Y-%m-%d %H:%M:%S') if stat['last_order_date'] else '',
+        ])
+    
+    return response
+
+
+@login_required
+@user_passes_test(manager_required, login_url='/login/')
+def manager_reports_customers_export_image(request):
+    """Экспорт отчета по клиентам в виде изображения (PNG)"""
+    log_action(
+        action='download',
+        user=request.user,
+        request=request,
+        description='Скачивание отчета по клиентам в формате PNG',
+    )
+    
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from io import BytesIO
+    except ImportError:
+        messages.error(request, "Библиотека matplotlib не установлена. Установите: pip install matplotlib")
+        return redirect('manager_reports_customers')
+    
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    orders = Order.objects.select_related('user').all()
+    
+    if date_from:
+        try:
+            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d')
+            orders = orders.filter(created_at__gte=date_from_obj)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d')
+            date_to_obj = date_to_obj + timedelta(days=1)
+            orders = orders.filter(created_at__lt=date_to_obj)
+        except ValueError:
+            pass
+    
+    if not date_from and not date_to:
+        month_ago = timezone.now() - timedelta(days=30)
+        orders = orders.filter(created_at__gte=month_ago)
+    
+    customer_stats = orders.filter(user__isnull=False).values(
+        'user__email'
+    ).annotate(
+        total_spent=Sum('total_amount')
+    ).order_by('-total_spent')[:10]
+    
+    # Создаем график
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # График топ-10 клиентов по сумме покупок
+    emails = [stat['user__email'][:20] + '...' if len(stat['user__email']) > 20 else stat['user__email'] for stat in customer_stats]
+    amounts = [float(stat['total_spent'] or 0) for stat in customer_stats]
+    
+    ax1.barh(emails, amounts, color='#6F2DBD')
+    ax1.set_title('Топ-10 клиентов по сумме покупок', fontsize=14, fontweight='bold')
+    ax1.set_xlabel('Сумма покупок (руб.)')
+    ax1.grid(True, alpha=0.3, axis='x')
+    
+    # Круговая диаграмма: авторизованные vs гостевые клиенты
+    auth_count = orders.filter(user__isnull=False).values('user').distinct().count()
+    guest_count = orders.filter(user__isnull=True).values('email').distinct().count()
+    
+    if auth_count > 0 or guest_count > 0:
+        ax2.pie([auth_count, guest_count], labels=['Авторизованные', 'Гостевые'], 
+                autopct='%1.1f%%', colors=['#6F2DBD', '#A663CC'], startangle=90)
+        ax2.set_title('Распределение клиентов', fontsize=14, fontweight='bold')
+    
+    plt.tight_layout()
+    
+    buffer = BytesIO()
+    canvas = FigureCanvasAgg(fig)
+    canvas.print_png(buffer)
+    plt.close(fig)
+    
+    response = HttpResponse(buffer.getvalue(), content_type='image/png')
+    response['Content-Disposition'] = f'attachment; filename="lexicon_customers_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png"'
+    
+    return response
+
 
 @login_required
 @user_passes_test(admin_required, login_url='/login/')

@@ -146,7 +146,8 @@ def admin_panel_model_edit(request, model_name, object_id=None):
     
     # Создаем форму динамически
     # Исключаем некоторые поля
-    exclude_fields = ['id', 'created_at', 'updated_at']
+    exclude_fields = ['id', 'created_at', 'updated_at', 'groups', 'user_permissions']  # Системные поля Django
+    many_to_many_fields = []
     
     if hasattr(model_class, '_meta'):
         # Получаем только прямые поля модели (не обратные связи)
@@ -158,11 +159,14 @@ def admin_panel_model_edit(request, model_name, object_id=None):
             if field.name not in exclude_fields:
                 direct_fields.append(field.name)
         
-        # ManyToMany поля можно включить, но они требуют специальной обработки
-        # Пока исключаем их, так как они сложны для редактирования
-        # Можно добавить позже, если нужно
+        # ManyToMany поля - включаем их в форму (кроме системных)
+        for field in model_class._meta.many_to_many:
+            if field.name not in exclude_fields:
+                many_to_many_fields.append(field.name)
         
-        form_fields = direct_fields if direct_fields else '__all__'
+        # Объединяем все поля
+        all_fields = direct_fields + many_to_many_fields
+        form_fields = all_fields if all_fields else '__all__'
     else:
         form_fields = '__all__'
     
@@ -178,29 +182,45 @@ def admin_panel_model_edit(request, model_name, object_id=None):
         if form.is_valid():
             old_obj = None
             if not is_new:
+                # Сохраняем ManyToMany значения до сохранения объекта
+                old_m2m_values = {}
+                for field_name in many_to_many_fields:
+                    if hasattr(obj, field_name):
+                        old_m2m_values[field_name] = list(getattr(obj, field_name).all())
+                
                 old_obj = model_class.objects.get(pk=obj.pk)
             
-            form.save()
+            # Сохраняем объект (ManyToMany поля сохраняются автоматически через form.save())
+            saved_obj = form.save()
             
             # Логируем изменение
             action = 'create' if is_new else 'update'
             changes = {}
             if old_obj:
                 for field in form.changed_data:
-                    old_value = getattr(old_obj, field, None)
-                    new_value = getattr(obj, field, None)
-                    changes[field] = {
-                        'old': str(old_value) if old_value is not None else '—',
-                        'new': str(new_value) if new_value is not None else '—'
-                    }
+                    if field in many_to_many_fields:
+                        # Для ManyToMany полей сравниваем списки
+                        old_value = old_m2m_values.get(field, [])
+                        new_value = list(getattr(saved_obj, field).all())
+                        changes[field] = {
+                            'old': ', '.join([str(v) for v in old_value]) if old_value else '—',
+                            'new': ', '.join([str(v) for v in new_value]) if new_value else '—'
+                        }
+                    else:
+                        old_value = getattr(old_obj, field, None)
+                        new_value = getattr(saved_obj, field, None)
+                        changes[field] = {
+                            'old': str(old_value) if old_value is not None else '—',
+                            'new': str(new_value) if new_value is not None else '—'
+                        }
             
             log_action(
                 action=action,
                 user=request.user,
                 request=request,
                 model_name=model_class.__name__,
-                object_id=obj.pk,
-                object_repr=str(obj),
+                object_id=saved_obj.pk,
+                object_repr=str(saved_obj),
                 changes=changes if changes else None,
             )
             

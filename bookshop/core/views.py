@@ -289,8 +289,48 @@ def search_books(request):
 
 
 def stationery_list(request):
-    stationery_items = Stationery.objects.all()
-    return render(request, "stationery_list.html", {"stationery": stationery_items})
+    """Список канцтоваров с фильтрацией по категориям и сортировкой"""
+    from django.db.models import Q
+    
+    stationery_items = Stationery.objects.select_related('category').all()
+    
+    # Фильтрация по категории
+    category_id = request.GET.get('category')
+    if category_id:
+        try:
+            category_id = int(category_id)
+            stationery_items = stationery_items.filter(category_id=category_id)
+        except (ValueError, TypeError):
+            pass
+    
+    # Сортировка
+    sort_by = request.GET.get('sort', 'price')
+    order = request.GET.get('order', 'asc')
+    
+    if sort_by == 'price':
+        if order == 'desc':
+            stationery_items = stationery_items.order_by('-price')
+        else:
+            stationery_items = stationery_items.order_by('price')
+    elif sort_by == 'name':
+        if order == 'desc':
+            stationery_items = stationery_items.order_by('-name')
+        else:
+            stationery_items = stationery_items.order_by('name')
+    
+    # Получаем все категории для фильтра
+    categories = Category.objects.annotate(
+        stationery_count=Count('stationery')
+    ).filter(stationery_count__gt=0).order_by('name')
+    
+    context = {
+        "stationery": stationery_items,
+        "categories": categories,
+        "selected_category": int(category_id) if category_id else None,
+        "sort_by": sort_by,
+        "order": order,
+    }
+    return render(request, "stationery_list.html", context)
 
 
 # ---------- Helpers ----------

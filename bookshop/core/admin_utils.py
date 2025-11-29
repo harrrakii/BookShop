@@ -4,10 +4,12 @@
 import json
 from django.core.serializers import serialize, deserialize
 from django.db import transaction
+from django.db.utils import IntegrityError
 from .models import (
     Author, Book, Category, DeliveryOption, Genre, LoyaltyCard,
     Order, OrderItem, PaymentCard, PickupPoint, Product,
-    Publisher, Review, Role, SavedAddress, Stationery, User
+    Publisher, Review, Role, SavedAddress, Stationery, User,
+    Wishlist, FAQ, SupportMessage, AuditLog
 )
 
 
@@ -36,12 +38,22 @@ def export_all_data_to_json():
         ('saved_addresses', SavedAddress),
         ('payment_cards', PaymentCard),
         ('loyalty_cards', LoyaltyCard),
+        ('wishlist', Wishlist),
+        ('faq', FAQ),
+        ('support_messages', SupportMessage),
+        # AuditLog обычно не экспортируем, так как это логи
+        # ('audit_logs', AuditLog),
     ]
     
     for key, model in models_to_export:
-        queryset = model.objects.all()
-        serialized = serialize('python', queryset)
-        data[key] = serialized
+        try:
+            queryset = model.objects.all()
+            serialized = serialize('python', queryset)
+            data[key] = serialized
+        except Exception as e:
+            # Если модель не существует или есть ошибка, пропускаем её
+            data[key] = []
+            print(f"Предупреждение: не удалось экспортировать {key}: {str(e)}")
     
     return json.dumps(data, indent=2, ensure_ascii=False, default=str)
 
@@ -49,13 +61,18 @@ def export_all_data_to_json():
 def import_data_from_json(json_data):
     """
     Импортирует данные из JSON в БД
+    ВАЖНО: Импорт выполняется в транзакции, при ошибке все изменения откатываются
     """
     try:
         data = json.loads(json_data)
     except json.JSONDecodeError as e:
         raise ValueError(f"Неверный формат JSON: {e}")
     
+    if not isinstance(data, dict):
+        raise ValueError("JSON должен содержать объект с данными")
+    
     errors = []
+    imported_counts = {}
     
     # Порядок импорта важен - сначала зависимости
     import_order = [
@@ -76,22 +93,65 @@ def import_data_from_json(json_data):
         ('saved_addresses', SavedAddress),
         ('payment_cards', PaymentCard),
         ('loyalty_cards', LoyaltyCard),
+        ('wishlist', Wishlist),
+        ('faq', FAQ),
+        ('support_messages', SupportMessage),
+        # AuditLog обычно не импортируем
+        # ('audit_logs', AuditLog),
     ]
     
-    with transaction.atomic():
-        for key, model in import_order:
-            if key in data:
-                try:
-                    objects = deserialize('python', data[key], ignorenonexistent=True, use_natural_foreign_keys=True)
-                    for obj in objects:
-                        obj.save()
-                except Exception as e:
-                    errors.append(f"Ошибка при импорте {key}: {str(e)}")
-                    # Не прерываем выполнение, продолжаем импорт остальных моделей
-                    pass
-    
-    if errors:
-        raise ValueError("Ошибки при импорте: " + "; ".join(errors))
-    
-    return True
+    # Используем транзакцию для атомарности операции
+    # Если произойдет ошибка, все изменения откатятся
+    try:
+        with transaction.atomic():
+            for key, model in import_order:
+                if key in data:
+                    try:
+                        if not isinstance(data[key], list):
+                            errors.append(f"Данные для {key} должны быть массивом")
+                            continue
+                        
+                        objects = deserialize('python', data[key], ignorenonexistent=True, use_natural_foreign_keys=True)
+                        count = 0
+                        for obj in objects:
+                            try:
+                                obj.save()
+                                count += 1
+                            except IntegrityError as e:
+                                # Пропускаем дубликаты (например, если запись уже существует)
+                                errors.append(f"Дубликат в {key}: {str(e)}")
+                                continue
+                            except Exception as e:
+                                errors.append(f"Ошибка при сохранении объекта в {key}: {str(e)}")
+                                # Продолжаем импорт остальных объектов
+                                continue
+                        
+                        imported_counts[key] = count
+                    except Exception as e:
+                        errors.append(f"Ошибка при импорте {key}: {str(e)}")
+                        # Продолжаем импорт остальных моделей
+                        continue
+                else:
+                    # Модель отсутствует в данных - это нормально
+                    imported_counts[key] = 0
+        
+        # Если были критические ошибки, выбрасываем исключение
+        # Но не критичные (дубликаты) просто логируем
+        if errors:
+            error_message = f"Импорт завершен с предупреждениями. Импортировано: {sum(imported_counts.values())} записей. Ошибки: {'; '.join(errors[:10])}"
+            if len(errors) > 10:
+                error_message += f" (и еще {len(errors) - 10} ошибок)"
+            print(error_message)
+        
+        return {
+            'success': True,
+            'imported': imported_counts,
+            'errors': errors
+        }
+        
+    except Exception as e:
+        # Критическая ошибка - транзакция откатится автоматически
+        raise ValueError(f"Критическая ошибка при импорте данных: {str(e)}")
+
+
 

@@ -1,7 +1,7 @@
 {% extends 'manager/base.html' %}
 
 {% block title %}{% if is_new %}Создание{% else %}Редактирование{% endif %} {{ model_name }}{% endblock %}
-{% block page_title %}{% if is_new %}➕ Создание{% else %}✏️ Редактирование{% endif %} {{ model_name }}{% endblock %}
+{% block page_title %}{% if is_new %}Создание{% else %}Редактирование{% endif %} {{ model_name }}{% endblock %}
 {% block page_description %}{% if is_new %}Создание новой записи{% else %}Редактирование записи #{{ object.id }}{% endif %}{% endblock %}
 
 {% block content %}
@@ -9,14 +9,80 @@
     <form method="post" enctype="multipart/form-data">
       {% csrf_token %}
       
+      <style>
+        .m2m-field-container {
+          min-height: 150px;
+          max-height: 250px;
+          overflow-y: auto;
+          padding: 0.75rem;
+          border: 2px solid #6F2DBD;
+          border-radius: 0.5rem;
+          background-color: #ffffff;
+          transition: all 0.2s ease;
+        }
+        .m2m-field-container:focus-within {
+          border-color: #A663CC;
+          box-shadow: 0 0 0 0.2rem rgba(111, 45, 189, 0.15);
+          outline: none;
+        }
+        .m2m-field-container select {
+          width: 100%;
+          border: none;
+          background: transparent;
+          padding: 0.25rem 0;
+          font-size: 0.95rem;
+        }
+        .m2m-field-container select:focus {
+          outline: none;
+        }
+        .m2m-field-container select option {
+          padding: 0.5rem 0.75rem;
+          margin: 0.15rem 0;
+          border-radius: 0.25rem;
+          cursor: pointer;
+        }
+        .m2m-field-container select option:checked {
+          background: linear-gradient(135deg, #6F2DBD 0%, #A663CC 100%);
+          color: white;
+          font-weight: 500;
+        }
+        .m2m-field-container select option:hover {
+          background: #C6D4FF;
+          color: #2d1b3d;
+        }
+        .form-label {
+          font-weight: 600;
+          color: #2d1b3d;
+          margin-bottom: 0.5rem;
+        }
+        .m2m-hint {
+          color: #6c757d;
+          font-size: 0.875rem;
+          margin-top: 0.5rem;
+        }
+        .m2m-hint i {
+          margin-right: 0.25rem;
+        }
+      </style>
+      
       <div class="row g-3">
         {% for field in form %}
-        <div class="col-md-6">
+        {% with widget_type=field.field.widget|stringformat:"s" %}
+        <div class="col-md-6 {% if 'SelectMultiple' in widget_type or 'CheckboxSelectMultiple' in widget_type %}col-12{% endif %}">
           <label for="{{ field.id_for_label }}" class="form-label">
             {{ field.label }}
             {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
           </label>
-          {{ field }}
+          {% if 'SelectMultiple' in widget_type or 'CheckboxSelectMultiple' in widget_type %}
+            <div class="m2m-field-container">
+              {{ field }}
+            </div>
+            <small class="m2m-hint">
+              <i class="bi bi-info-circle"></i> Удерживайте <kbd>Ctrl</kbd> (или <kbd>Cmd</kbd> на Mac) для выбора нескольких элементов
+            </small>
+          {% else %}
+            {{ field }}
+          {% endif %}
           {% if field.help_text %}
           <small class="form-text text-muted">{{ field.help_text }}</small>
           {% endif %}
@@ -28,6 +94,7 @@
           </div>
           {% endif %}
         </div>
+        {% endwith %}
         {% endfor %}
       </div>
 

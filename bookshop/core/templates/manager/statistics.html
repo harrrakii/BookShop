@@ -1,7 +1,7 @@
 {% extends 'manager/base.html' %}
 
 {% block title %}Статистика{% endblock %}
-{% block page_title %}📈 Статистика{% endblock %}
+{% block page_title %}Статистика{% endblock %}
 {% block page_description %}Детальная аналитика по продажам{% endblock %}
 
 {% block extra_css %}
@@ -90,9 +90,9 @@
               <tr>
                 <td>
                   {% if stat.fulfillment_type == 'delivery' %}
-                    🚚 Доставка
+                    Доставка
                   {% else %}
-                    📦 Самовывоз
+                    Самовывоз
                   {% endif %}
                 </td>
                 <td><strong>{{ stat.count }}</strong></td>
@@ -106,6 +106,144 @@
         </table>
       </div>
     </div>
+  </div>
+  
+  <!-- Статистика по клиентам -->
+  <div class="data-card mt-4 mb-4">
+    <div class="data-card-header">
+      <h3 class="data-card-title">Статистика по клиентам</h3>
+    </div>
+    
+    <!-- KPI карточки -->
+    <div class="stats-grid mb-4">
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <div class="stat-card-title">Авторизованные клиенты</div>
+          <div class="stat-card-icon primary">
+            <i class="bi bi-person-check"></i>
+          </div>
+        </div>
+        <div class="stat-card-value">{{ total_customers }}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <div class="stat-card-title">Гостевые клиенты</div>
+          <div class="stat-card-icon info">
+            <i class="bi bi-person"></i>
+          </div>
+        </div>
+        <div class="stat-card-value">{{ total_guest_customers }}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <div class="stat-card-title">Новые клиенты</div>
+          <div class="stat-card-icon success">
+            <i class="bi bi-person-plus"></i>
+          </div>
+        </div>
+        <div class="stat-card-value">{{ new_customers }}</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <div class="stat-card-title">Общая выручка</div>
+          <div class="stat-card-icon success">
+            <i class="bi bi-currency-exchange"></i>
+          </div>
+        </div>
+        <div class="stat-card-value">{{ total_revenue|floatformat:0 }} ₽</div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-card-header">
+          <div class="stat-card-title">Средний чек</div>
+          <div class="stat-card-icon warning">
+            <i class="bi bi-graph-up"></i>
+          </div>
+        </div>
+        <div class="stat-card-value">{{ avg_order_value|floatformat:0 }} ₽</div>
+      </div>
+    </div>
+    
+    <!-- Топ клиентов -->
+    <div class="row g-4">
+      <div class="col-lg-12">
+        <h4 class="mb-3">Топ-20 клиентов (авторизованные)</h4>
+        {% if customer_stats %}
+          <div class="table-responsive">
+            <table class="table-manager">
+              <thead>
+                <tr>
+                  <th>Клиент</th>
+                  <th>Email</th>
+                  <th>Количество заказов</th>
+                  <th>Общая сумма</th>
+                  <th>Средний чек</th>
+                  <th>Последний заказ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for stat in customer_stats %}
+                <tr>
+                  <td>
+                    <strong>
+                      {% if stat.user__first_name or stat.user__last_name %}
+                        {{ stat.user__first_name|default:'' }} {{ stat.user__last_name|default:'' }}
+                      {% else %}
+                        Клиент #{{ stat.user__id }}
+                      {% endif %}
+                    </strong>
+                  </td>
+                  <td>{{ stat.user__email }}</td>
+                  <td><strong>{{ stat.total_orders }}</strong></td>
+                  <td><strong>{{ stat.total_spent|floatformat:2 }} ₽</strong></td>
+                  <td>{{ stat.avg_order_value|floatformat:2 }} ₽</td>
+                  <td>{{ stat.last_order_date|date:"d.m.Y H:i" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <p class="text-muted text-center py-4">Нет данных по авторизованным клиентам</p>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Топ гостевых клиентов -->
+    {% if guest_stats %}
+    <div class="row g-4 mt-2">
+      <div class="col-lg-12">
+        <h4 class="mb-3">Топ-10 гостевых клиентов (по email)</h4>
+        <div class="table-responsive">
+          <table class="table-manager">
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Количество заказов</th>
+                <th>Общая сумма</th>
+                <th>Средний чек</th>
+                <th>Последний заказ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for stat in guest_stats %}
+              <tr>
+                <td><strong>{{ stat.email }}</strong></td>
+                <td><strong>{{ stat.total_orders }}</strong></td>
+                <td><strong>{{ stat.total_spent|floatformat:2 }} ₽</strong></td>
+                <td>{{ stat.avg_order_value|floatformat:2 }} ₽</td>
+                <td>{{ stat.last_order_date|date:"d.m.Y H:i" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 {% endblock %}
 

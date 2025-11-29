@@ -12,13 +12,31 @@
       --amethyst: #A663CC;
       --dark-liver: #594236;
       --umber: #6F584B;
+      
+      /* Светлая тема (по умолчанию) */
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f9fa;
+      --text-primary: #2d1b3d;
+      --text-secondary: #6c757d;
+      --border-color: #e5e7eb;
+    }
+    
+    /* Темная тема */
+    [data-theme="dark"] {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --text-primary: #e8e8e8;
+      --text-secondary: #b0b0b0;
+      --border-color: #2d3748;
     }
     
     body {
       font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background-color: #f8f9fa;
+      background-color: var(--bg-secondary);
+      color: var(--text-primary);
       margin: 0;
       padding: 0;
+      transition: background-color 0.3s ease, color 0.3s ease;
     }
     
     .hero {
@@ -54,7 +72,11 @@
       box-shadow: 0 4px 20px rgba(111, 45, 189, 0.15);
       transition: all 0.3s ease;
       height: 100%;
-      background: white;
+      background: var(--bg-primary);
+    }
+    
+    [data-theme="dark"] .category-card {
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }
     
     .category-card:hover {
@@ -84,7 +106,7 @@
     }
     
     .category-card .card-text {
-      color: var(--dark-liver);
+      color: var(--text-secondary);
       font-size: 1rem;
     }
     
@@ -95,11 +117,12 @@
     
     footer {
       margin-top: 4rem;
-      background: white;
+      background: var(--bg-primary);
       text-align: center;
       padding: 2rem 1rem;
-      border-top: 1px solid #e5e7eb;
-      color: var(--dark-liver);
+      border-top: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
     }
     
     @media (max-width: 768px) {
@@ -180,7 +203,7 @@
     <div class="col-md-6">
       <a href="{% url 'stationery_list' %}" class="text-decoration-none">
         <div class="card category-card">
-          <img src="https://images.unsplash.com/photo-1706360424579-3d4c48d5b86c?w=800&h=600&fit=crop&auto=format&q=80" 
+          <img src="https://plus.unsplash.com/premium_photo-1706191097325-4fa216b9308b?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
                class="card-img-top" alt="Канцтовары">
           <div class="card-body">
             <h5 class="card-title">Канцтовары</h5>
